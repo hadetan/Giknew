@@ -20,6 +20,9 @@ function loadConfig() {
   }
   return {
     telegramToken: process.env.TELEGRAM_BOT_TOKEN,
+    appBaseUrl: process.env.APP_BASE_URL || '',
+    autoSetWebhook: /^(1|true)$/i.test(process.env.AUTO_SET_WEBHOOK || ''),
+    polling: /^(1|true)$/i.test(process.env.TELEGRAM_POLLING || ''),
     github: {
       appId: process.env.GITHUB_APP_ID,
       privateKey: process.env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n'),

@@ -1,5 +1,7 @@
 const { logger } = require('../utils/logger');
 const { addInstallation, removeInstallation } = require('../repositories/installationRepo');
+const { findByState, consumeState } = require('../repositories/linkStateRepo');
+const { markLinked } = require('../repositories/userRepo');
 
 async function handleGithubEvent(payload, headers, config) {
   const event = headers['x-github-event'];
@@ -31,9 +33,8 @@ async function handleInstallation(payload) {
     return;
   }
   if (action === 'created') {
-    // TODO: Associate with user after link flow (pending design). For now we just ensure presence.
-    // We cannot know the userId yet; this will be updated once link mapping exists.
-    // Placeholder: log only.
+    // Link will now be handled via explicit redirect callback; just log creation.
+    logger.info({ installationId }, 'installation_created');
   }
 }
 

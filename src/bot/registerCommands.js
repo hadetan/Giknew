@@ -39,12 +39,30 @@ function registerCommands(bot, config) {
   });
 
   bot.command('linkgithub', async (ctx) => {
-    await ensureUser(ctx);
-    ctx.reply('Link flow not implemented yet.');
+    const user = await ensureUser(ctx);
+    const { createState } = require('../repositories/linkStateRepo');
+    const state = await createState(user.id);
+    const appSlug = process.env.GITHUB_APP_SLUG;
+    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    if (appSlug) {
+      const redirect = encodeURIComponent(`${baseUrl}/github/install/callback`);
+      const url = `https://github.com/apps/${appSlug}/installations/new?state=${state}&redirect_url=${redirect}`;
+      ctx.reply(`Tap to install the GitHub App and finish linking:\n${url}`);
+    } else {
+      ctx.reply('Missing GITHUB_APP_SLUG env. Provide slug then rerun /linkgithub. State: ' + state);
+    }
   });
 
   bot.command('unlink', async (ctx) => {
-    ctx.reply('Unlink not implemented yet.');
+    const user = await ensureUser(ctx);
+    const { getInstallationsForUser, removeInstallation } = require('../repositories/installationRepo');
+    const { markLinked } = require('../repositories/userRepo');
+    const installs = await getInstallationsForUser(user.id);
+    for (const inst of installs) {
+      try { await removeInstallation(inst.installationId); } catch (_) {}
+    }
+    await markLinked(user.id, false);
+    ctx.reply('GitHub link removed locally. You may also uninstall the App from GitHub settings.');
   });
 
   bot.on('inline_query', async (ctx) => {

@@ -22,6 +22,7 @@ model User {
   contextMessages ContextMessage[]
   notifications   NotificationLog[]
   staleStates     StalePrState[]
+  linkStates      LinkState[]
 }
 
 model Installation {
@@ -74,4 +75,14 @@ model StalePrState {
   prNumber        Int
   lastNotifiedAt  DateTime @default(now())
   @@unique([userId, repoId, prNumber])
+}
+
+model LinkState {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  state      String   @unique
+  consumed   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  @@index([userId, createdAt])
 }

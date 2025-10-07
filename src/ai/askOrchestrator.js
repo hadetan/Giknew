@@ -1,23 +1,23 @@
 const { chatCompletion } = require('./longcatClient');
 const { logger } = require('../utils/logger');
 const { loadContextMessages, storeTurn } = require('./contextService');
+const { fetchFreshSlice } = require('../github/apiClient');
 
 // NOTE: GitHub slice injection pending.
 
 async function runAsk({ config, user, question, mode, stream, sendStreaming, threadRootId, maxContextTurns = 6 }) {
-  const system = { role: 'system', content: 'You are Giknew, a GitHub assistant. Answer concisely using provided context. If data unavailable, state that.' };
-  // Load prior context pairs (user/assistant) limited window
+  const fresh = await fetchFreshSlice(config, user);
+  const system = { role: 'system', content: 'You are Giknew, a GitHub assistant. Use only provided context. If information is missing, state that.' };
+  const contextBlock = `PR_SUMMARY:\n${fresh.prSummary}\n`;
   let prior = [];
   if (threadRootId) {
     prior = await loadContextMessages(config.security.masterKey, user.id, threadRootId, maxContextTurns);
-    // Only include last <= 2*maxContextTurns messages (already enforced by repo) but we ensure order is chronological.
   }
-  const userMsg = { role: 'user', content: question };
+  const userMsg = { role: 'user', content: `${question}\n\n<context>\n${contextBlock}` };
   const messages = [system, ...prior, userMsg];
 
   const start = Date.now();
   try {
-    // Persist user question
     if (threadRootId) {
       await storeTurn({ masterKey: config.security.masterKey, userId: user.id, threadRootId, role: 'user', content: question });
     }

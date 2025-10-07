@@ -19,7 +19,6 @@ async function fetchThreadContext(userId, threadRootId, maxTurns = 6) {
 
 async function pruneOld(userId, threadRootId, keep = CONTEXT_LIMIT) {
   const threadId = BigInt(threadRootId);
-  // Find ids ordered newest first skipping first 'keep'
   const excess = await prisma.contextMessage.findMany({
     where: { userId, threadRootId: threadId },
     orderBy: { createdAt: 'desc' },

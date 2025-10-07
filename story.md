@@ -57,10 +57,10 @@ OUT (Defer):
 
 ### 5.1 Onboarding & Auth
 - [x] `/start` sends concise capability introduction.
-- [ ] `/linkgithub` returns unique one-time state/nonce link to GitHub App auth.
-- [ ] Successful GitHub App install triggers webhook → user record marked linked.
+- [x] `/linkgithub` returns unique one-time state/nonce link to GitHub App auth.
+ - [x] Successful GitHub App install triggers callback → user record marked linked.
 - [ ] Multi-user isolation: user A cannot retrieve data pertaining to user B (manual inspection attempt blocked by queries).
-- [ ] `/unlink` revokes (or flags) installation locally and confirms.
+- [x] `/unlink` revokes (or flags) installation locally and confirms.
 - [ ] Revocation (webhook) updates user to unlinked and notifies them.
 
 ### 5.2 Commands & Interaction
@@ -73,16 +73,16 @@ OUT (Defer):
 ### 5.3 AI Answer Generation
 - [x] Default model: `LongCat-Flash-Chat`.
 - [x] Thinking model: `LongCat-Flash-Thinking` used only when mode=thinking.
-- [ ] Prompt always includes **fresh** GitHub slice (no persistent cached summary beyond transient in-process data).
+ - [x] Prompt always includes **fresh** GitHub slice (no persistent cached summary beyond transient in-process data).
 - [x] Max output tokens limited (≤1000) and enforced.
 - [ ] If processing >5s, bot sends placeholder “Summarizing…” (or typing state) before final answer.
 - [ ] Structured Telegram-friendly Markdown output (no unsupported formatting).
 - [ ] Streaming partial output if feasible flag enabled; else final single response.
 
 ### 5.4 Conversation Context
-- [ ] Replies to a bot message reuse last ≤6 Q/A turns for that thread only.
-- [ ] New non-reply user message starts new context thread.
-- [ ] Context persisted encrypted; oldest pruned beyond window.
+- [x] Replies to a bot message reuse last ≤6 Q/A turns for that thread only.
+- [x] New non-reply user message starts new context thread.
+- [x] Context persisted encrypted; oldest pruned beyond window.
 
 ### 5.5 Notifications (Realtime)
 - [ ] PR comment webhook → notify relevant user(s) with excerpt + link.
@@ -105,9 +105,9 @@ OUT (Defer):
 
 ### 5.8 Data Model & Persistence
 - [x] Prisma schema defines all required models & initial migration applied.
-- [ ] `users` table stores telegram id, hashed GitHub user id, mode, linked flag.
-- [ ] `installations` map user ↔ installation ids.
-- [ ] `context_messages` store limited encrypted dialog turns.
+- [x] `users` table stores telegram id, hashed GitHub user id, mode, linked flag.
+- [x] `installations` map user ↔ installation ids.
+- [x] `context_messages` store limited encrypted dialog turns.
 - [ ] `notification_log` dedupes events.
 - [ ] `stale_pr_state` tracks last stale notifications.
 - [x] Repository layer uses Prisma client (no raw SQL in application layer).
