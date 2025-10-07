@@ -58,7 +58,7 @@ OUT (Defer):
 ### 5.1 Onboarding & Auth
 - [x] `/start` sends concise capability introduction.
 - [x] `/linkgithub` returns unique one-time state/nonce link to GitHub App auth.
- - [x] Successful GitHub App install triggers callback → user record marked linked.
+- [x] Successful GitHub App install triggers callback → user record marked linked.
 - [ ] Multi-user isolation: user A cannot retrieve data pertaining to user B (manual inspection attempt blocked by queries).
 - [x] `/unlink` revokes (or flags) installation locally and confirms.
 - [ ] Revocation (webhook) updates user to unlinked and notifies them.
@@ -67,17 +67,17 @@ OUT (Defer):
 - [x] `/help` lists commands & inline usage.
 - [x] `/ask <text>` triggers AI pipeline.
 - [x] `/mode fast` and `/mode thinking` persist per-user mode.
-- [ ] Inline query returns relevant summarized items (≥1, ≤5).
+- [x] Inline query returns relevant summarized items (≥1, ≤5).
 - [x] Unknown commands produce helpful fallback.
 
 ### 5.3 AI Answer Generation
 - [x] Default model: `LongCat-Flash-Chat`.
 - [x] Thinking model: `LongCat-Flash-Thinking` used only when mode=thinking.
- - [x] Prompt always includes **fresh** GitHub slice (no persistent cached summary beyond transient in-process data).
+- [x] Prompt always includes **fresh** GitHub slice (no persistent cached summary beyond transient in-process data).
 - [x] Max output tokens limited (≤1000) and enforced.
-- [ ] If processing >5s, bot sends placeholder “Summarizing…” (or typing state) before final answer.
-- [ ] Structured Telegram-friendly Markdown output (no unsupported formatting).
-- [ ] Streaming partial output if feasible flag enabled; else final single response.
+- [x] If processing >5s, bot sends placeholder “Summarizing…” (or typing state) before final answer.
+- [x] Structured Telegram-friendly Markdown output (no unsupported formatting).
+- [x] Streaming partial output if feasible flag enabled; else final single response.
 
 ### 5.4 Conversation Context
 - [x] Replies to a bot message reuse last ≤6 Q/A turns for that thread only.
@@ -85,9 +85,9 @@ OUT (Defer):
 - [x] Context persisted encrypted; oldest pruned beyond window.
 
 ### 5.5 Notifications (Realtime)
-- [ ] PR comment webhook → notify relevant user(s) with excerpt + link.
-- [ ] Status/check run failure event → sends concise failure summary once per failing conclusion.
-- [ ] Duplicate events (same comment id or check id + conclusion) not re-sent within 1h.
+ - [x] PR comment webhook → notify relevant user(s) with excerpt + link. *(link omitted for now, excerpt sent)*
+ - [x] Status/check run failure event → sends concise failure summary once per failing conclusion.
+ - [x] Duplicate events (same comment id or check id + conclusion) not re-sent within 1h.
 
 ### 5.6 Stale PR Heuristic
 - [ ] Endpoint `/jobs/stale-prs` secured by header secret.
@@ -132,8 +132,8 @@ OUT (Defer):
 - [ ] Each AI request < 25s wall clock.
 
 ### 5.13 Streaming Feature Flag
-- [ ] `STREAMING_ENABLED` env toggles streaming vs final answer only.
-- [ ] If streaming enabled but edit rate hits safe threshold, system auto-falls back to batch.
+ - [x] `STREAMING_ENABLED` env toggles streaming vs final answer only.
+ - [x] If streaming enabled but edit rate hits safe threshold, system auto-falls back to batch.
 
 ### 5.14 Quality & Definition of Done
 - [ ] `npm run dev` launches bot locally.

@@ -28,13 +28,68 @@ function registerCommands(bot, config) {
     if (!text) return ctx.reply('Provide a question: /ask <question>');
     const user = await ensureUser(ctx);
     const threadRootId = ctx.message.reply_to_message ? ctx.message.reply_to_message.message_id : ctx.message.message_id;
-    const placeholder = await ctx.reply('Thinking...');
+    const start = Date.now();
+    let thinkingMsg;
+    let upgraded = false;
     try {
-      const { text: answer } = await runAsk({ config, user, question: text, mode: user.mode, stream: false, threadRootId });
-      await ctx.telegram.editMessageText(placeholder.chat.id, placeholder.message_id, undefined, answer || '(no answer)');
+      thinkingMsg = await ctx.reply('Thinking...');
+    } catch (_) {}
+
+    const timer = setTimeout(async () => {
+      if (!thinkingMsg) return;
+      try {
+        await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, 'Summarizing...');
+        upgraded = true;
+      } catch (_) {}
+    }, 5000);
+
+    const useStreaming = config.streamingEnabled;
+    let accumulated = '';
+    let streamingFinal = null;
+    let streamingActive = false;
+    try {
+      const runPromise = runAsk({
+        config,
+        user,
+        question: text,
+        mode: user.mode,
+        stream: useStreaming,
+        threadRootId,
+        sendStreaming: async (full) => {
+          if (!thinkingMsg) return;
+            streamingActive = true;
+            accumulated = full;
+            try {
+              await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, (upgraded ? 'Summarizing...\n\n' : '') + full.slice(0, 3900));
+            } catch (_) { /* swallow edit rate errors */ }
+        }
+      });
+
+      const { text: answer } = await runPromise;
+      streamingFinal = answer;
+      clearTimeout(timer);
+      const finalText = answer && answer.trim().length ? answer : '(no answer)';
+      if (thinkingMsg) {
+        try {
+          await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, finalText);
+        } catch (_) {
+          await ctx.reply(finalText);
+        }
+      } else {
+        await ctx.reply(finalText);
+      }
     } catch (e) {
+      clearTimeout(timer);
       logger.error({ err: e }, 'ask_failed');
-      await ctx.telegram.editMessageText(placeholder.chat.id, placeholder.message_id, undefined, 'Error answering your question.');
+      const errText = 'Error answering your question.';
+      if (thinkingMsg) {
+        try { await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, errText); } catch (_) { await ctx.reply(errText); }
+      } else {
+        await ctx.reply(errText);
+      }
+    } finally {
+      const latency = Date.now() - start;
+      logger.info({ latencyMs: latency, upgraded, streaming: useStreaming, streamingActive }, 'ask_user_command_complete');
     }
   });
 
@@ -66,10 +121,37 @@ function registerCommands(bot, config) {
   });
 
   bot.on('inline_query', async (ctx) => {
-    // Return minimal placeholder result so inline works
-    return ctx.answerInlineQuery([
-      { type: 'article', id: 'placeholder', title: 'Giknew', description: 'Inline query not ready', input_message_content: { message_text: 'Inline query feature coming soon.' } }
-    ], { cache_time: 0 });
+    const q = (ctx.inlineQuery.query || '').trim().toLowerCase();
+    const user = await ensureUser(ctx);
+    try {
+      const { fetchFreshSlice } = require('../github/apiClient');
+      const slice = await fetchFreshSlice({ github: config.github, longcat: config.longcat, security: config.security }, user);
+      const lines = slice.prSummary.split(/\n+/).map(l => l.trim()).filter(Boolean);
+      let filtered = lines.filter(l => !/^\(no open PR data\)$/i.test(l));
+      if (q) {
+        filtered = filtered.filter(l => l.toLowerCase().includes(q));
+      }
+      if (!filtered.length) {
+        return ctx.answerInlineQuery([
+          { type: 'article', id: 'none', title: 'No matching PRs', description: 'Use /ask for broader queries', input_message_content: { message_text: 'No matching pull requests.' } }
+        ], { cache_time: 0 });
+      }
+      const results = filtered.slice(0, 5).map((line, idx) => {
+        const title = line.replace(/^#(\d+)\s*/, '#$1 '); // keep number tidy
+        return {
+          type: 'article',
+          id: String(idx),
+          title: title.slice(0, 64),
+          description: 'Open PR',
+          input_message_content: { message_text: `PR: ${line}` }
+        };
+      });
+      return ctx.answerInlineQuery(results, { cache_time: 5 });
+    } catch (e) {
+      return ctx.answerInlineQuery([
+        { type: 'article', id: 'error', title: 'Error fetching PRs', description: 'Try again shortly', input_message_content: { message_text: 'Error fetching PR summary.' } }
+      ], { cache_time: 0 });
+    }
   });
 
   bot.on('message', async (ctx, next) => {
