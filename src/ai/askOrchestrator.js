@@ -23,6 +23,12 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
       await storeTurn({ masterKey: config.security.masterKey, userId: user.id, threadRootId, role: 'user', content: question });
     }
 
+    /**
+     * Streaming edit policy:
+     * - Do not edit more frequently than every 900ms (Telegram rate comfort)
+     * - If >8 edits occur within first 12s, fallback to suppress further partials
+     * - On 3 consecutive edit failures, fallback
+     */
     if (stream && config.streamingEnabled) {
       let lastEdit = Date.now();
       let editCount = 0;

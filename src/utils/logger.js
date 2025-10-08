@@ -5,9 +5,16 @@ const redact = {
   censor: '[REDACTED]'
 };
 
-const logger = pino({
+const baseLogger = pino({
   level: process.env.LOG_LEVEL || 'info',
   redact
 });
 
-module.exports = { logger };
+function withContext(req, extras = {}) {
+  const bindings = {};
+  if (req?.requestId) bindings.requestId = req.requestId;
+  if (req?.userId) bindings.userId = req.userId;
+  return baseLogger.child({ ...bindings, ...extras });
+}
+
+module.exports = { logger: baseLogger, withContext };

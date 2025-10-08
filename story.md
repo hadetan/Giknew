@@ -103,7 +103,7 @@ OUT (Defer):
 - [x] No secrets or tokens logged (pino redaction).
 - [x] User can run `/exportmeta` to see non-sensitive metadata.
 - [x] `/purge` deletes user data (soft or hard) + prevents further notifications.
-- [ ] Telegram webhook only accepts expected update schemas; rejects others gracefully.
+- [x] Telegram webhook only accepts expected update schemas; rejects others gracefully.
 
 ### 5.8 Data Model & Persistence
 - [x] Prisma schema defines all required models & initial migration applied.
@@ -117,7 +117,7 @@ OUT (Defer):
 ### 5.9 Config & Observability
 - [x] Central config module validates required env vars at startup.
 - [x] `/health` endpoint returns JSON: version, uptime seconds, mode counts.
-- [ ] Structured JSON logging with severity & request correlation id.
+- [x] Structured JSON logging with severity & request correlation id.
 
 ### 5.10 Failure Handling
 - [x] Uncaught errors produce sanitized user message & logged stack.
@@ -134,8 +134,9 @@ OUT (Defer):
 - [x] Each AI request < 25s wall clock.
 
 ### 5.13 Streaming Feature Flag
- - [x] `STREAMING_ENABLED` env toggles streaming vs final answer only.
- - [x] If streaming enabled but edit rate hits safe threshold, system auto-falls back to batch.
+- [x] `STREAMING_ENABLED` env toggles streaming vs final answer only.
+- [x] If streaming enabled but edit rate hits safe threshold, system auto-falls back to batch.
+- [x] Throttle & placeholders documented (900ms min interval, 8 edits early fallback, 5s 'Summarizing...' escalation, typing action every 4s).
 
 ### 5.14 Quality & Definition of Done
 - [ ] `npm run dev` launches bot locally.

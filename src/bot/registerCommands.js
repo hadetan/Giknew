@@ -207,7 +207,7 @@ function registerCommands(bot, config) {
                 ], { cache_time: 0 });
             }
             const results = filtered.slice(0, 5).map((line, idx) => {
-                const title = line.replace(/^#(\d+)\s*/, '#$1 '); // keep number tidy
+                const title = line.replace(/^#(\d+)\s*/, '#$1 ');
                 return {
                     type: 'article',
                     id: String(idx),
