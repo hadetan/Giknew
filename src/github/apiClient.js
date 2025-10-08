@@ -4,7 +4,7 @@ const { logger } = require('../utils/logger');
 const { getInstallationsForUser } = require('../repositories/installationRepo');
 
 async function fetchFreshSlice(config, user, options = {}) {
-    const { maxInstallations = 5, reposPerInstallation = 2, prsPerRepo = 5, totalLineCap = 12, includeChecks = true } = options;
+    const { maxInstallations = 5, reposPerInstallation = 100, prsPerRepo = 5, totalLineCap = 12, includeChecks = true } = options;
 
     const installations = await getInstallationsForUser(user.id);
     for (const inst of installations) {
@@ -37,15 +37,23 @@ async function fetchFreshSlice(config, user, options = {}) {
             const reposResp = await fetch(`https://api.github.com/installation/repositories?per_page=${reposPerInstallation}`, { headers });
             if (reposResp.status === 403) {
                 rateLimited = true;
-                lines.push('(rate limited fetching repositories)');
+                logger.warn({ installation: inst.installationId, status: reposResp.status }, 'installation_repos_forbidden');
+                lines.push(`(installation ${inst.installationId} access forbidden)`);
                 break;
             }
             if (!reposResp.ok) {
+                const text = await reposResp.text().catch(() => '');
+                logger.warn({ installation: inst.installationId, status: reposResp.status, text }, 'installation_repo_list_failed');
                 lines.push(`(installation ${inst.installationId} repo list error)`);
                 continue;
             }
             const reposJson = await reposResp.json();
             const repos = reposJson.repositories || [];
+            if (!repos.length) {
+                logger.info({ installation: inst.installationId }, 'installation_has_no_accessible_repos');
+                lines.push(`(installation ${inst.installationId} no accessible repos)`);
+                continue;
+            }
             for (const repo of repos.slice(0, reposPerInstallation)) {
                 if (lines.length >= totalLineCap) break;
                 const prsResp = await fetch(`https://api.github.com/repos/${repo.full_name}/pulls?state=open&per_page=${prsPerRepo}`, { headers });

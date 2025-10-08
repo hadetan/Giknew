@@ -90,7 +90,7 @@ function registerCommands(bot, config) {
                 }
             });
 
-            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ text: 'Request exceeded time limit. Try refining your question.' }), 25000));
+            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ text: 'Request exceeded time limit. Try refining your question.' }), 60000));
             const { text: answer } = await Promise.race([runPromise, timeoutPromise]);
             clearTimeout(timer);
             const finalText = answer && answer.trim().length ? answer : '(no answer)';
