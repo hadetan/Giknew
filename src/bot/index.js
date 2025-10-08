@@ -4,7 +4,7 @@ const { registerCommands } = require('./registerCommands');
 
 const perUserInFlight = new Map();
 let globalInFlight = 0;
-const USER_MAX = 5; // placeholder; will enforce in performance guard task
+const USER_MAX = 5;
 const GLOBAL_MAX = 25;
 
 function incUser(userId) {
@@ -30,7 +30,18 @@ function createBot(config) {
         const userId = ctx.from?.id;
         let tracked = false;
         if (userId) {
-            try { incUser(userId); tracked = true; } catch (_) { }
+            try {
+                incUser(userId); tracked = true;
+                const perUserCount = perUserInFlight.get(userId) || 0;
+                if (perUserCount > USER_MAX) {
+                    decUser(userId);
+                    return ctx.reply('Too many concurrent requests for your user. Please wait.');
+                }
+                if (globalInFlight > GLOBAL_MAX) {
+                    decUser(userId);
+                    return ctx.reply('System is busy handling many requests. Try again shortly.');
+                }
+            } catch (_) { /* ignore */ }
         }
         try {
             await next();
