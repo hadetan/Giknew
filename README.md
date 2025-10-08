@@ -51,7 +51,7 @@ This means the bot attempted to create or fetch an installation token for that i
 - Permissions or installation scope: even with a valid token, the App may not have permissions to list repositories or PRs for an installation. Check "Permissions & events" in your GitHub App settings and ensure it has at least read access to Repository metadata and Pull Requests.
 - Installation not present: make sure the user completed the installation flow and the installation ID is recorded in the database.
 
-Quick troubleshooting steps
+## Quick troubleshooting steps
 1. Confirm `.env` values:
 	 - `GITHUB_APP_ID` matches App ID in GitHub App settings.
 	 - `GITHUB_APP_PRIVATE_KEY` contains the exact PEM from GitHub (you can paste the multi-line PEM or the quoted single-line form; the loader will normalize it).
