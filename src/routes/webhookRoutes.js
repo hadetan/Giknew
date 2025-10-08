@@ -20,5 +20,6 @@ module.exports = function buildWebhookRoutes(config) {
         next();
     }, (req, res) => telegramWebhook(config, req, res));
     r.get('/github/callback', (req, res) => installCallback(config, req, res));
+    r.get('/github/install/callback', (req, res) => installCallback(config, req, res));
     return r;
 };

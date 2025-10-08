@@ -18,14 +18,28 @@ function loadConfig() {
     if (Buffer.from(process.env.MASTER_KEY, 'utf8').length < 32) {
         throw new Error('MASTER_KEY must be a 32-byte value (hex or raw).');
     }
+    let rawKey = process.env.GITHUB_APP_PRIVATE_KEY || '';
+    if ((rawKey.startsWith('"') && rawKey.endsWith('"')) || (rawKey.startsWith("'") && rawKey.endsWith("'"))) {
+        rawKey = rawKey.slice(1, -1);
+    }
+    rawKey = rawKey.replace(/\\n/g, '\n');
+    if (/-----BEGIN [A-Z ]+-----/.test(rawKey) && /-----END [A-Z ]+-----/.test(rawKey) && !rawKey.includes('\n')) {
+        rawKey = rawKey.replace(/(-----BEGIN [A-Z ]+-----)(.+)(-----END [A-Z ]+-----)/, (_, h, body, f) => {
+            const wrapped = body.replace(/\s+/g, '')
+                .match(/.{1,64}/g)
+                .join('\n');
+            return `${h}\n${wrapped}\n${f}`;
+        });
+    }
+
     return {
         telegramToken: process.env.TELEGRAM_BOT_TOKEN,
         appBaseUrl: process.env.APP_BASE_URL || '',
         autoSetWebhook: /^(1|true)$/i.test(process.env.AUTO_SET_WEBHOOK || ''),
         polling: /^(1|true)$/i.test(process.env.TELEGRAM_POLLING || ''),
         github: {
-            appId: process.env.GITHUB_APP_ID,
-            privateKey: process.env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            appId: Number(process.env.GITHUB_APP_ID),
+            privateKey: rawKey,
             webhookSecret: process.env.GITHUB_WEBHOOK_SECRET
         },
         longcat: {

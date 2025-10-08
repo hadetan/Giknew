@@ -86,7 +86,7 @@ function registerCommands(bot, config) {
                     streamingActive = true;
                     try {
                         await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, (upgraded ? 'Summarizing...\n\n' : '') + full.slice(0, 3900));
-                    } catch (_) { /* swallow edit rate errors */ }
+                    } catch (_) {}
                 }
             });
 
@@ -127,7 +127,7 @@ function registerCommands(bot, config) {
         const appSlug = process.env.GITHUB_APP_SLUG;
         const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
         if (appSlug) {
-            const redirect = encodeURIComponent(`${baseUrl}/github/install/callback`);
+            const redirect = encodeURIComponent(`${baseUrl}/github/callback`);
             const url = `https://github.com/apps/${appSlug}/installations/new?state=${state}&redirect_url=${redirect}`;
             ctx.reply(`Tap to install the GitHub App and finish linking:\n${url}`);
         } else {
