@@ -3,6 +3,23 @@ const { getInstallationToken } = require('./auth');
 const { logger } = require('../utils/logger');
 const { getInstallationsForUser } = require('../repositories/installationRepo');
 
+const accessibleReposCache = new Map();
+const CACHE_TTL_MS = Number(process.env.REPO_CACHE_TTL_MS || 60 * 1000);
+
+function setAccessibleReposCache(userId, data) {
+    accessibleReposCache.set(userId, { ts: Date.now(), data });
+}
+
+function getAccessibleReposCache(userId) {
+    const row = accessibleReposCache.get(userId);
+    if (!row) return null;
+    if (Date.now() - row.ts > CACHE_TTL_MS) {
+        accessibleReposCache.delete(userId);
+        return null;
+    }
+    return row.data;
+}
+
 const pMap = async (items, mapper, concurrency = 6) => {
     const results = [];
     const executing = new Set();
@@ -134,7 +151,7 @@ async function fetchFreshSlice(config, user, options = {}) {
                     logger.debug({ err: e, repo: repo.full_name }, 'repo_prs_fetch_failed');
                 }
             });
-            await pMap(repoTasks, t => t(), 1);
+            await pMap(repoTasks, t => t(), 8);
         } catch (e) {
             logger.warn({ err: e, installation: inst.installationId }, 'installation_aggregation_failed');
             lines.push(`(installation ${inst.installationId} aggregation error)`);
@@ -158,4 +175,95 @@ async function fetchFreshSlice(config, user, options = {}) {
     };
 }
 
-module.exports = { fetchFreshSlice };
+async function findRepoByNameAcrossInstallations(config, user, repoName) {
+    const cache = getAccessibleReposCache(user.id);
+    if (cache) {
+        const found = cache.find(r => r.name.toLowerCase() === repoName.toLowerCase() || r.full_name.toLowerCase().endsWith('/' + repoName.toLowerCase()));
+        if (found) {
+            try {
+                const tokenData = await getInstallationToken(config.github, found.installationId.toString());
+                const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+                const repoResp = await fetch(`https://api.github.com/repos/${found.full_name}`, { headers });
+                if (!repoResp.ok) return null;
+                const data = await repoResp.json();
+                return { installationId: found.installationId, repo: data };
+            } catch (e) {}
+        }
+    }
+
+    const installations = await getInstallationsForUser(user.id);
+    const names = [];
+    for (const inst of installations) {
+        let tokenData;
+        try {
+            tokenData = await getInstallationToken(config.github, inst.installationId.toString());
+        } catch (e) {
+            continue;
+        }
+        const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+        try {
+            const reposResp = await fetch('https://api.github.com/installation/repositories?per_page=100', { headers });
+            if (!reposResp.ok) continue;
+            const reposJson = await reposResp.json();
+            const repos = reposJson.repositories || [];
+            for (const r of repos) {
+                names.push({ name: r.name, full_name: r.full_name, installationId: inst.installationId });
+            }
+        } catch (e) {
+            continue;
+        }
+    }
+    if (names.length) setAccessibleReposCache(user.id, names);
+    const found2 = names.find(r => r.name.toLowerCase() === repoName.toLowerCase() || r.full_name.toLowerCase().endsWith('/' + repoName.toLowerCase()));
+    if (found2) {
+        try {
+            const tokenData = await getInstallationToken(config.github, found2.installationId.toString());
+            const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+            const repoResp = await fetch(`https://api.github.com/repos/${found2.full_name}`, { headers });
+            if (!repoResp.ok) return null;
+            const data = await repoResp.json();
+            return { installationId: found2.installationId, repo: data };
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
+async function listAccessibleRepoNames(config, user, limit = 200) {
+    const { getInstallationsForUser } = require('../repositories/installationRepo');
+    // honor cache first
+    const cached = getAccessibleReposCache(user.id);
+    if (cached) {
+        return Array.from(new Set(cached.map(r => r.name))).slice(0, limit);
+    }
+    const installations = await getInstallationsForUser(user.id);
+    const names = [];
+    for (const inst of installations) {
+        let tokenData;
+        try {
+            tokenData = await getInstallationToken(config.github, inst.installationId.toString());
+        } catch (e) {
+            continue;
+        }
+        const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+        try {
+            const reposResp = await fetch('https://api.github.com/installation/repositories?per_page=100', { headers });
+            if (!reposResp.ok) continue;
+            const reposJson = await reposResp.json();
+            const repos = reposJson.repositories || [];
+            for (const r of repos) {
+                if (names.length >= limit) break;
+                names.push({ name: r.name, full_name: r.full_name, installationId: inst.installationId });
+            }
+            if (names.length >= limit) break;
+        } catch (e) {
+            continue;
+        }
+    }
+    // populate cache with objects for faster findRepo lookups
+    setAccessibleReposCache(user.id, names);
+    return Array.from(new Set(names.map(r => r.name))).slice(0, limit);
+}
+
+module.exports = { fetchFreshSlice, findRepoByNameAcrossInstallations, listAccessibleRepoNames };
