@@ -12,13 +12,22 @@ function hashGithubAccountId(accountId, salt) {
 
 async function installCallback(config, req, res) {
     const { state, installation_id } = req.query;
+    console.debug('installCallback called', { state: !!state, installation_id: !!installation_id });
     if (!state || !installation_id) return res.status(400).send('Missing state or installation_id');
     const row = await findByState(state);
-    if (!row || row.consumed) return res.status(400).send('Invalid state');
-    try { await consumeState(state); } catch (_) { }
+    if (!row) {
+        console.warn('installCallback: state not found', { state });
+        return res.status(400).send('Invalid state');
+    }
+    if (row.consumed) {
+        console.warn('installCallback: state already consumed', { state });
+        return res.status(400).send('State already consumed');
+    }
     try {
-        await addInstallation(row.userId, installation_id);
+        const added = await addInstallation(row.userId, installation_id);
+        console.debug('installCallback: installation added', { installationRecordId: added && added.id });
         await markLinked(row.userId, true);
+        try { await consumeState(state); } catch (e) { console.debug('installCallback: consumeState non-fatal', e && e.message); }
         try {
             const jwt = createAppJwt(config.github.appId, config.github.privateKey);
             const instResp = await fetch(`https://api.github.com/app/installations/${installation_id}`, { headers: { Authorization: `Bearer ${jwt}`, Accept: 'application/vnd.github+json' } });
@@ -34,8 +43,10 @@ async function installCallback(config, req, res) {
                 }
             }
         } catch (e) {
+            console.debug('installCallback: github fetch failed', e && e.message);
         }
     } catch (e) {
+        console.error('installCallback failure', e);
         return res.status(500).send('Link failure');
     }
     res.send('GitHub App linked. You can return to Telegram.');
