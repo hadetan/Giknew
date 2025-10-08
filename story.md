@@ -138,12 +138,6 @@ OUT (Defer):
 - [x] If streaming enabled but edit rate hits safe threshold, system auto-falls back to batch.
 - [x] Throttle & placeholders documented (900ms min interval, 8 edits early fallback, 5s 'Summarizing...' escalation, typing action every 4s).
 
-### 5.14 Quality & Definition of Done
-- [ ] `npm run dev` launches bot locally.
-- [ ] ESLint passes with zero errors (warnings allowed ≤5).
-- [ ] Basic smoke script can send simulated webhook & command without crash.
-- [ ] Documentation up-to-date with implemented behaviors.
-
 ---
 ## 6. Non-Functional Requirements
 | Aspect | Requirement |
@@ -307,6 +301,3 @@ All Phase 1 acceptance criteria checked, README + License present, lint passes, 
 | Context Thread | A chain of messages linked by reply in Telegram |
 | Thinking Mode | Higher reasoning model selection (LongCat-Flash-Thinking) |
 | Fresh Slice | Live GitHub snapshot acquired at question time |
-
----
-*End of Story – This document is authoritative for Phase 1.*
