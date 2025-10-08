@@ -68,7 +68,7 @@ function registerCommands(bot, config) {
         let typingActive = true;
         const typingLoop = async () => {
             while (typingActive) {
-                try { await ctx.telegram.sendChatAction(ctx.chat.id, 'typing'); } catch (_) {}
+                try { await ctx.telegram.sendChatAction(ctx.chat.id, 'typing'); } catch (_) { }
                 await new Promise(r => setTimeout(r, 4000));
             }
         };
@@ -106,7 +106,7 @@ function registerCommands(bot, config) {
         } catch (e) {
             clearTimeout(timer);
             logger.error({ err: e }, 'ask_failed');
-            const errText = /timeout/i.test(e.message||'') ? 'LongCat timed out preparing an answer. Try again shortly.' : 'Error answering your question.';
+            const errText = /timeout/i.test(e.message || '') ? 'LongCat timed out preparing an answer. Try again shortly.' : 'Error answering your question.';
             if (thinkingMsg) {
                 try { await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, errText); } catch (_) { await ctx.reply(errText); }
             } else {
@@ -180,7 +180,7 @@ function registerCommands(bot, config) {
         const installs = await prisma.installation.findMany({ where: { userId: user.id } });
         for (const inst of installs) {
             await prisma.secret.deleteMany({ where: { installationId: inst.id } });
-            try { await prisma.installation.delete({ where: { id: inst.id } }); } catch (_) {}
+            try { await prisma.installation.delete({ where: { id: inst.id } }); } catch (_) { }
         }
         await prisma.user.update({ where: { id: user.id }, data: { githubUserHash: 'purged', linked: false, mode: 'fast' } });
         await ctx.reply('Your data has been purged (metadata anonymized).');
