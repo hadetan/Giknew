@@ -66,7 +66,7 @@ This means the bot attempted to create or fetch an installation token for that i
 4. Test installation token for a specific installation id (advanced):
 	 - If needed I can add a diagnostic script that exchanges the app JWT for an installation token and prints the HTTP response details.
 
-Developer quick start
+## Developer quick start
 1. Copy `.env.example` to `.env` and populate required values.
 2. Install dependencies and generate Prisma client:
 
