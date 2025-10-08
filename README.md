@@ -34,7 +34,7 @@ This repository contains the Phase 1 scaffold: Telegram command handlers, GitHub
 	- Optional context messages for AI conversations (scoped by user).
 - You can remove all local data with `/purge`, and you can uninstall the GitHub App on GitHub to revoke access.
 
-How the GitHub integration works (high level)
+## How the GitHub integration works (high level)
 - The bot uses a GitHub App and the App's private key to create a signed JWT.
 - The JWT is exchanged for an installation access token (one per installation) by calling the GitHub REST API:
 	POST https://api.github.com/app/installations/:installation_id/access_tokens
