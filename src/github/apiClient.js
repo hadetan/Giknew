@@ -107,7 +107,9 @@ async function fetchFreshSlice(config, user, options = {}) {
                             const repoFull = repoUrl.replace('https://api.github.com/repos/', '');
                             if (!repoFullNames.has(repoFull)) continue;
                             const title = (it.title || '').slice(0, 70);
-                            lines.push(`✅ #${it.number} ${title} (${repoFull.split('/').pop()})`);
+                            const stateTag = it.state ? `state:${it.state}` : '';
+                            const url = it.html_url || '';
+                            lines.push(`✅ #${it.number} ${title} (${repoFull.split('/').pop()}) [${stateTag}] ${url}`);
                         }
                     } catch (e) {
                         logger.debug({ err: e, owner }, 'search_prs_failed');
@@ -145,7 +147,9 @@ async function fetchFreshSlice(config, user, options = {}) {
                             }
                         }
                         const failBadge = failingCount ? `❌${failingCount}` : '✅';
-                        lines.push(`${failBadge} #${pr.number} ${pr.title.slice(0, 70)} (${repo.name})`);
+                        const stateTag = pr.state ? `state:${pr.state}` : '';
+                        const url = pr.html_url || `https://github.com/${repo.full_name}/pull/${pr.number}`;
+                        lines.push(`${failBadge} #${pr.number} ${pr.title.slice(0, 70)} (${repo.name}) [${stateTag}] ${url}`);
                     }
                 } catch (e) {
                     logger.debug({ err: e, repo: repo.full_name }, 'repo_prs_fetch_failed');
@@ -187,7 +191,7 @@ async function findRepoByNameAcrossInstallations(config, user, repoName) {
                 if (!repoResp.ok) return null;
                 const data = await repoResp.json();
                 return { installationId: found.installationId, repo: data };
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 
@@ -214,8 +218,9 @@ async function findRepoByNameAcrossInstallations(config, user, repoName) {
         }
     }
     if (names.length) setAccessibleReposCache(user.id, names);
-    const found2 = names.find(r => r.name.toLowerCase() === repoName.toLowerCase() || r.full_name.toLowerCase().endsWith('/' + repoName.toLowerCase()));
-    if (found2) {
+    const matches = names.filter(r => r.name.toLowerCase() === repoName.toLowerCase() || r.full_name.toLowerCase().endsWith('/' + repoName.toLowerCase()));
+    if (matches.length === 1) {
+        const found2 = matches[0];
         try {
             const tokenData = await getInstallationToken(config.github, found2.installationId.toString());
             const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
@@ -226,6 +231,9 @@ async function findRepoByNameAcrossInstallations(config, user, repoName) {
         } catch (e) {
             return null;
         }
+    }
+    if (matches.length > 1) {
+        return { multiple: matches };
     }
     return null;
 }

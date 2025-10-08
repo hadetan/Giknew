@@ -47,6 +47,9 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
             if (found && found.repo) {
                 const r = found.repo;
                 repoMetaBlock = `REPO_FOUND:\n- full_name: ${r.full_name}\n- description: ${r.description || ''}\n- created_at: ${r.created_at}\n- language: ${r.language || ''}\n- open_issues: ${r.open_issues || 0}\n- forks: ${r.forks || 0}\n- visibility: ${r.visibility || ''}\n`;
+            } else if (found && found.multiple) {
+                const sample = found.multiple.slice(0, 10).map(m => `${m.full_name}`).join(', ');
+                repoMetaBlock = `REPO_AMBIGUOUS:\n- candidates: ${sample}\n`;
             }
         }
     } catch (e) {
