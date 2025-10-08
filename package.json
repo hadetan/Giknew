@@ -9,6 +9,9 @@
     "lint": "eslint .",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:generate": "prisma generate",
+    "vercel-build": "prisma generate",
+    "set-webhook": "node scripts/set_telegram_webhook.js",
+    "remove-webhook": "node scripts/remove_telegram_webhook.js",
     "test": "echo \"(no tests yet)\""
   },
   "keywords": [],
