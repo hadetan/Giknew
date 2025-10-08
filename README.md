@@ -27,7 +27,7 @@ This repository contains the Phase 1 scaffold: Telegram command handlers, GitHub
 - Concurrency & rate guards
 	- Per-user and global concurrency limits to protect the AI backend and GitHub API usage.
 
-Permissions and privacy
+## Permissions and privacy
 - The bot stores:
 	- Telegram user metadata and a hash used for linking.
 	- Linked GitHub installation IDs (no raw GitHub tokens are stored).
