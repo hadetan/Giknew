@@ -14,6 +14,13 @@ async function fetchFreshSlice(config, user, options = {}) {
   } = options;
 
   const installations = await getInstallationsForUser(user.id);
+  // Defensive isolation guard: installations are always queried by userId; verify integrity
+  for (const inst of installations) {
+    if (inst.userId !== user.id) {
+      logger.error({ installation: inst.installationId, foundUserId: inst.userId, expected: user.id }, 'isolation_violation_installation');
+      return { prSummary: 'Isolation guard triggered; aborting data fetch.', checks: [] };
+    }
+  }
   if (!installations.length) return { prSummary: 'No linked installations.', checks: [] };
 
   const lines = [];

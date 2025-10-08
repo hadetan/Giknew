@@ -7,7 +7,7 @@ async function handleGithubEvent(payload, headers, config) {
   const event = headers['x-github-event'];
   switch (event) {
     case 'installation':
-      await handleInstallation(payload);
+      await handleInstallation(payload, config);
       break;
     case 'installation_repositories':
       logger.info({ action: payload.action, installation: payload.installation?.id }, 'installation_repositories');
@@ -29,13 +29,13 @@ async function handleGithubEvent(payload, headers, config) {
   }
 }
 
-async function handleInstallation(payload) {
+async function handleInstallation(payload, config) {
   const { action, installation } = payload;
   const installationId = installation?.id;
   if (!installationId) return;
 
   if (action === 'deleted') {
-    await safeRemoveInstallation(installationId);
+    await safeRemoveInstallation(installationId, config);
     return;
   }
   if (action === 'created') {
@@ -44,10 +44,21 @@ async function handleInstallation(payload) {
   }
 }
 
-async function safeRemoveInstallation(installationId) {
+async function safeRemoveInstallation(installationId, config) {
   try {
+    const inst = await prisma.installation.findUnique({ where: { installationId: BigInt(installationId) }, include: { user: true } });
+    if (!inst) return;
+    const user = inst.user;
     await removeInstallation(installationId);
+    const remaining = await prisma.installation.count({ where: { userId: user.id } });
+    if (remaining === 0) {
+      try { await prisma.user.update({ where: { id: user.id }, data: { linked: false } }); } catch (e) { logger.warn({ err: e, userId: user.id }, 'unlink_flag_update_failed'); }
+      await sendTelegram(user.telegramId, '🔌 Your GitHub installation was removed and you are now unlinked. Use /linkgithub to connect again.', config);
+    } else {
+      await sendTelegram(user.telegramId, `🔌 GitHub installation ${installationId} removed. ${remaining} installation(s) remain linked.`, config);
+    }
   } catch (e) {
+    logger.error({ err: e, installationId }, 'safe_remove_installation_failed');
   }
 }
 
@@ -63,7 +74,6 @@ async function notifyUsers(users, text, eventType, externalId, config) {
   for (const user of users) {
     try {
       if (await recentlySent(user.id, eventType, externalId, 60)) continue;
-      // Store first; if unique constraint fails we skip sending duplicate.
       const rec = await recordNotification(user.id, eventType, externalId);
       if (!rec) continue;
       await sendTelegram(user.telegramId, text, config);
@@ -74,7 +84,6 @@ async function notifyUsers(users, text, eventType, externalId, config) {
 }
 
 async function sendTelegram(telegramId, text, config) {
-  // Lazy load bot to reuse existing factory without circular import
   const { createBot } = require('../bot');
   if (!global.__notify_bot) {
     global.__notify_bot = createBot(config);

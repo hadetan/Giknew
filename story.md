@@ -59,9 +59,9 @@ OUT (Defer):
 - [x] `/start` sends concise capability introduction.
 - [x] `/linkgithub` returns unique one-time state/nonce link to GitHub App auth.
 - [x] Successful GitHub App install triggers callback → user record marked linked.
-- [ ] Multi-user isolation: user A cannot retrieve data pertaining to user B (manual inspection attempt blocked by queries).
+- [x] Multi-user isolation: user A cannot retrieve data pertaining to user B (manual inspection attempt blocked by queries).
 - [x] `/unlink` revokes (or flags) installation locally and confirms.
-- [ ] Revocation (webhook) updates user to unlinked and notifies them.
+- [x] Revocation (webhook) updates user to unlinked and notifies them.
 
 ### 5.2 Commands & Interaction
 - [x] `/help` lists commands & inline usage.
@@ -110,8 +110,8 @@ OUT (Defer):
 - [x] `users` table stores telegram id, hashed GitHub user id, mode, linked flag.
 - [x] `installations` map user ↔ installation ids.
 - [x] `context_messages` store limited encrypted dialog turns.
-- [ ] `notification_log` dedupes events.
-- [ ] `stale_pr_state` tracks last stale notifications.
+- [x] `notification_log` dedupes events.
+- [x] `stale_pr_state` tracks last stale notifications.
 - [x] Repository layer uses Prisma client (no raw SQL in application layer).
 
 ### 5.9 Config & Observability

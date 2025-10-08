@@ -155,6 +155,22 @@ function registerCommands(bot, config) {
         await ctx.reply('Your data has been purged (metadata anonymized).');
     });
 
+    bot.command('isolationdiag', async (ctx) => {
+        const user = await ensureUser(ctx);
+        const prisma = require('../lib/prisma');
+        const installs = await prisma.installation.findMany({ where: { userId: user.id } });
+        const foreignInstalls = installs.filter(i => i.userId !== user.id);
+        const contextLeak = await prisma.contextMessage.findFirst({ where: { NOT: { userId: user.id } } });
+        const issues = [];
+        if (foreignInstalls.length) issues.push('Foreign installation ids present');
+        if (contextLeak) issues.push('Context leak detected');
+        if (!issues.length) {
+            await ctx.reply('Isolation OK: installations and context confined to your user.');
+        } else {
+            await ctx.reply('Isolation issues: ' + issues.join('; '));
+        }
+    });
+
     bot.on('inline_query', async (ctx) => {
         const q = (ctx.inlineQuery.query || '').trim().toLowerCase();
         const user = await ensureUser(ctx);
