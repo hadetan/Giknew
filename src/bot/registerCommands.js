@@ -77,7 +77,7 @@ function registerCommands(bot, config) {
         } catch (e) {
             clearTimeout(timer);
             logger.error({ err: e }, 'ask_failed');
-            const errText = 'Error answering your question.';
+            const errText = /timeout/i.test(e.message||'') ? 'LongCat timed out preparing an answer. Try again shortly.' : 'Error answering your question.';
             if (thinkingMsg) {
                 try { await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, errText); } catch (_) { await ctx.reply(errText); }
             } else {

@@ -121,8 +121,8 @@ OUT (Defer):
 
 ### 5.10 Failure Handling
 - [ ] Uncaught errors produce sanitized user message & logged stack.
-- [ ] LongCat timeout (>30s) aborts and sends fallback error answer.
-- [ ] GitHub API rate limit detection → user informed to retry (not silent fail).
+- [x] LongCat timeout (>30s) aborts and sends fallback error answer.
+- [x] GitHub API rate limit detection → user informed to retry (not silent fail).
 
 ### 5.11 Open Source Compliance
 - [x] LICENSE (MIT) present.

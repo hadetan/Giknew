@@ -27,20 +27,15 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
       let lastEdit = Date.now();
       let editCount = 0;
       let fallback = false;
-      const minIntervalMs = 900; // throttle edits
+      const minIntervalMs = 900;
       const failureThreshold = 3;
       let failures = 0;
       let finalResult;
       finalResult = await chatCompletion({
-        baseUrl: config.longcat.baseUrl,
-        apiKey: config.longcat.apiKey,
-        mode: mode || user.mode,
-        messages,
-        stream: true,
+        baseUrl: config.longcat.baseUrl, apiKey: config.longcat.apiKey, mode: mode || user.mode, messages, stream: true,
         onChunk: async (delta, full) => {
-          if (fallback) return; // stop sending after fallback triggered
+          if (fallback) return;
           const now = Date.now();
-          // auto fallback if edit rate risk or too many failures
           if (editCount >= 8 && (now - start) < 12000) {
             fallback = true;
             return;
@@ -59,28 +54,31 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
           }
         }
       });
-      // persist assistant turn after streaming completes
       const formatted = formatAnswer(finalResult.text || '');
       if (threadRootId) {
         try { await storeTurn({ masterKey: config.security.masterKey, userId: user.id, threadRootId, role: 'assistant', content: formatted }); } catch (e) { logger.warn({ err: e }, 'store_stream_turn_failed'); }
       }
-      return { ...finalResult, text: formatted };
+      let decorated = formatted;
+      if (fresh.rateLimited) {
+        decorated = '⚠️ GitHub rate limit encountered; partial data shown. Try again later.\n\n' + decorated;
+      }
+      return { ...finalResult, text: decorated };
     }
-    const result = await chatCompletion({
-      baseUrl: config.longcat.baseUrl,
-      apiKey: config.longcat.apiKey,
-      mode: mode || user.mode,
-      messages,
-      stream: false
-    });
+    const result = await chatCompletion({ baseUrl: config.longcat.baseUrl, apiKey: config.longcat.apiKey, mode: mode || user.mode, messages, stream: false });
     const formatted = formatAnswer(result.text || '');
     if (threadRootId) {
       await storeTurn({ masterKey: config.security.masterKey, userId: user.id, threadRootId, role: 'assistant', content: formatted });
     }
-    return { ...result, text: formatted };
+    let decorated = formatted;
+    if (fresh.rateLimited) {
+      decorated = '⚠️ GitHub rate limit encountered; partial data shown. Try again later.\n\n' + decorated;
+    }
+    return { ...result, text: decorated };
   } catch (e) {
     logger.error({ err: e }, 'ask pipeline failure');
-    throw e;
+    const isTimeout = /timeout/i.test(e.message || '');
+    const fallbackMsg = isTimeout ? 'LongCat timed out preparing an answer. Please try again in a moment.' : 'Internal error processing your question.';
+    return { text: fallbackMsg, error: true };
   } finally {
     const latency = Date.now() - start;
     logger.info({ latencyMs: latency }, 'ask_complete');
