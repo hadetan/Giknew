@@ -3,6 +3,23 @@ const { getInstallationToken } = require('./auth');
 const { logger } = require('../utils/logger');
 const { getInstallationsForUser } = require('../repositories/installationRepo');
 
+const accessibleReposCache = new Map();
+const CACHE_TTL_MS = Number(process.env.REPO_CACHE_TTL_MS || 60 * 1000);
+
+function setAccessibleReposCache(userId, data) {
+    accessibleReposCache.set(userId, { ts: Date.now(), data });
+}
+
+function getAccessibleReposCache(userId) {
+    const row = accessibleReposCache.get(userId);
+    if (!row) return null;
+    if (Date.now() - row.ts > CACHE_TTL_MS) {
+        accessibleReposCache.delete(userId);
+        return null;
+    }
+    return row.data;
+}
+
 const pMap = async (items, mapper, concurrency = 6) => {
     const results = [];
     const executing = new Set();
@@ -18,6 +35,14 @@ const pMap = async (items, mapper, concurrency = 6) => {
     }
     return Promise.all(results);
 };
+
+function repoMatchesObj(repo, repoName) {
+    if (!repo || !repoName) return false;
+    const repoNameLower = repoName.toLowerCase();
+    const name = (repo.name || (repo.full_name && repo.full_name.split('/').pop()) || '').toLowerCase();
+    const full = (repo.full_name || '').toLowerCase();
+    return name === repoNameLower || full.endsWith('/' + repoNameLower);
+}
 
 async function fetchFreshSlice(config, user, options = {}) {
     const { maxInstallations = 5, reposPerInstallation = 100, prsPerRepo = 5, totalLineCap = 12, includeChecks = true } = options;
@@ -90,7 +115,9 @@ async function fetchFreshSlice(config, user, options = {}) {
                             const repoFull = repoUrl.replace('https://api.github.com/repos/', '');
                             if (!repoFullNames.has(repoFull)) continue;
                             const title = (it.title || '').slice(0, 70);
-                            lines.push(`✅ #${it.number} ${title} (${repoFull.split('/').pop()})`);
+                            const stateTag = it.state ? `state:${it.state}` : '';
+                            const url = it.html_url || '';
+                            lines.push(`✅ #${it.number} ${title} (${repoFull.split('/').pop()}) [${stateTag}] ${url}`);
                         }
                     } catch (e) {
                         logger.debug({ err: e, owner }, 'search_prs_failed');
@@ -128,13 +155,15 @@ async function fetchFreshSlice(config, user, options = {}) {
                             }
                         }
                         const failBadge = failingCount ? `❌${failingCount}` : '✅';
-                        lines.push(`${failBadge} #${pr.number} ${pr.title.slice(0, 70)} (${repo.name})`);
+                        const stateTag = pr.state ? `state:${pr.state}` : '';
+                        const url = pr.html_url || `https://github.com/${repo.full_name}/pull/${pr.number}`;
+                        lines.push(`${failBadge} #${pr.number} ${pr.title.slice(0, 70)} (${repo.name}) [${stateTag}] ${url}`);
                     }
                 } catch (e) {
                     logger.debug({ err: e, repo: repo.full_name }, 'repo_prs_fetch_failed');
                 }
             });
-            await pMap(repoTasks, t => t(), 1);
+            await pMap(repoTasks, t => t(), 8);
         } catch (e) {
             logger.warn({ err: e, installation: inst.installationId }, 'installation_aggregation_failed');
             lines.push(`(installation ${inst.installationId} aggregation error)`);
@@ -158,4 +187,98 @@ async function fetchFreshSlice(config, user, options = {}) {
     };
 }
 
-module.exports = { fetchFreshSlice };
+async function findRepoByNameAcrossInstallations(config, user, repoName) {
+    const cache = getAccessibleReposCache(user.id);
+    if (cache) {
+        const found = cache.find(r => repoMatchesObj(r, repoName));
+        if (found) {
+            try {
+                const tokenData = await getInstallationToken(config.github, found.installationId.toString());
+                const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+                const repoResp = await fetch(`https://api.github.com/repos/${found.full_name}`, { headers });
+                if (!repoResp.ok) return null;
+                const data = await repoResp.json();
+                return { installationId: found.installationId, repo: data };
+            } catch (e) {
+                logger.debug({ err: e, repoName }, 'repo_fetch_failed');
+            }
+        }
+    }
+
+    const installations = await getInstallationsForUser(user.id);
+    const names = [];
+    for (const inst of installations) {
+        let tokenData;
+        try {
+            tokenData = await getInstallationToken(config.github, inst.installationId.toString());
+        } catch (e) {
+            continue;
+        }
+        const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+        try {
+            const reposResp = await fetch('https://api.github.com/installation/repositories?per_page=100', { headers });
+            if (!reposResp.ok) continue;
+            const reposJson = await reposResp.json();
+            const repos = reposJson.repositories || [];
+            for (const r of repos) {
+                names.push({ name: r.name, full_name: r.full_name, installationId: inst.installationId });
+            }
+        } catch (e) {
+            continue;
+        }
+    }
+    if (names.length) setAccessibleReposCache(user.id, names);
+    const matches = names.filter(r => repoMatchesObj(r, repoName));
+    if (matches.length === 1) {
+        const found2 = matches[0];
+        try {
+            const tokenData = await getInstallationToken(config.github, found2.installationId.toString());
+            const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+            const repoResp = await fetch(`https://api.github.com/repos/${found2.full_name}`, { headers });
+            if (!repoResp.ok) return null;
+            const data = await repoResp.json();
+            return { installationId: found2.installationId, repo: data };
+        } catch (e) {
+            logger.debug({ err: e, repoName }, 'repo_fetch_failed');
+        }
+    }
+    if (matches.length > 1) {
+        return { multiple: matches };
+    }
+    return null;
+}
+
+async function listAccessibleRepoNames(config, user, limit = 200) {
+    const cached = getAccessibleReposCache(user.id);
+    if (cached) {
+        return Array.from(new Set(cached.map(r => r.name))).slice(0, limit);
+    }
+    const installations = await getInstallationsForUser(user.id);
+    const names = [];
+    for (const inst of installations) {
+        let tokenData;
+        try {
+            tokenData = await getInstallationToken(config.github, inst.installationId.toString());
+        } catch (e) {
+            continue;
+        }
+        const headers = { Authorization: `Bearer ${tokenData.token}`, Accept: 'application/vnd.github+json' };
+        try {
+            const reposResp = await fetch('https://api.github.com/installation/repositories?per_page=100', { headers });
+            if (!reposResp.ok) continue;
+            const reposJson = await reposResp.json();
+            const repos = reposJson.repositories || [];
+            for (const r of repos) {
+                if (names.length >= limit) break;
+                names.push({ name: r.name, full_name: r.full_name, installationId: inst.installationId });
+            }
+            if (names.length >= limit) break;
+        } catch (e) {
+            continue;
+        }
+    }
+    setAccessibleReposCache(user.id, names);
+    return Array.from(new Set(names.map(r => r.name))).slice(0, limit);
+}
+
+module.exports = { fetchFreshSlice, findRepoByNameAcrossInstallations, listAccessibleRepoNames };
