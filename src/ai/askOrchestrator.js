@@ -1,8 +1,9 @@
 const { chatCompletion } = require('./longcatClient');
 const { logger } = require('../utils/logger');
 const { loadContextMessages, storeTurn } = require('./contextService');
-const { fetchFreshSlice } = require('../github/apiClient');
+const { fetchFreshSlice, findRepoByNameAcrossInstallations } = require('../github/apiClient');
 const { formatAnswer } = require('./formatAnswer');
+const { listAccessibleRepoNames } = require('../github/apiClient');
 
 async function runAsk({ config, user, question, mode, stream, sendStreaming, threadRootId, maxContextTurns = 6 }) {
     const fresh = await fetchFreshSlice(config, user);
@@ -13,9 +14,51 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
 
     const checksBlock = (Array.isArray(fresh.checks) && fresh.checks.length) ? 'FAILING_CHECKS:\n' + fresh.checks.map(c => `- ${c.repo}#${c.pr}: ${c.count} failing checks`).join('\n') + '\n' : '';
 
+    let repoMetaBlock = '';
+    try {
+        const patterns = [
+            /(?:repo|repository)\s+(?:called|named|named as)?\s*["']?([A-Za-z0-9_.-]+)["']?/i,
+            /do I have any repo(?:s)? called\s+["']?([A-Za-z0-9_.-]+)["']?/i,
+            /check if I have (?:a )?repo(?:s)?(?: named)?\s*["']?([A-Za-z0-9_.-]+)["']?/i,
+            /(?:what|where|show)\s+(?:is|are)\s+(?:my )?(?:repo|repository)\s+(?:called\s+)?["']?([A-Za-z0-9_.-]+)["']?/i,
+            /have I got (?:a )?repo(?: named)?\s*["']?([A-Za-z0-9_.-]+)["']?/i
+        ];
+        let repoNameMatch = null;
+        for (const p of patterns) {
+            const m = (question.match(p) || [])[1];
+            if (m) { repoNameMatch = m; break; }
+        }
+
+        if (!repoNameMatch) {
+            const names = await listAccessibleRepoNames(config, user, 200);
+            if (names && names.length) {
+                const qTokens = question.toLowerCase().split(/[^a-z0-9_.-]+/i).filter(Boolean);
+                qTokens.sort((a, b) => b.length - a.length);
+                for (const token of qTokens) {
+                    if (!/^[a-z0-9_.-]{2,40}$/i.test(token)) continue;
+                    const foundName = names.find(n => n.toLowerCase() === token || n.toLowerCase().includes(token) || token.includes(n.toLowerCase()));
+                    if (foundName) { repoNameMatch = foundName; break; }
+                }
+            }
+        }
+
+        if (repoNameMatch) {
+            const found = await findRepoByNameAcrossInstallations(config, user, repoNameMatch);
+            if (found && found.repo) {
+                const r = found.repo;
+                repoMetaBlock = `REPO_FOUND:\n- full_name: ${r.full_name}\n- description: ${r.description || ''}\n- created_at: ${r.created_at}\n- language: ${r.language || ''}\n- open_issues: ${r.open_issues || 0}\n- forks: ${r.forks || 0}\n- visibility: ${r.visibility || ''}\n`;
+            } else if (found && found.multiple) {
+                const sample = found.multiple.slice(0, 10).map(m => `${m.full_name}`).join(', ');
+                repoMetaBlock = `REPO_AMBIGUOUS:\n- candidates: ${sample}\n`;
+            }
+        }
+    } catch (e) {
+        logger.debug({ err: e, question }, 'repo_lookup_failed');
+    }
+
     const rateNote = fresh.rateLimited ? '\n(NOTE: GitHub rate-limited during fetch; results may be partial)\n' : '';
 
-    const contextBlock = `PR_SUMMARY:\n${prSummary}\n${checksBlock}${rateNote}`;
+    const contextBlock = `PR_SUMMARY:\n${prSummary}\n${checksBlock}${repoMetaBlock}${rateNote}`;
     let prior = [];
     if (threadRootId) {
         prior = await loadContextMessages(config.security.masterKey, user.id, threadRootId, maxContextTurns);
