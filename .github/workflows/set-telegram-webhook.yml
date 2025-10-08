@@ -1,0 +1,17 @@
+name: Set Telegram Webhook
+
+on:
+  workflow_dispatch:
+
+jobs:
+  set-webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set webhook
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook
+          method: POST
+          contentType: application/json
+          body: |
+            { "url": "${{ secrets.VERCEL_APP_URL }}/api/webhook/telegram" }

@@ -1,0 +1,17 @@
+name: Run stale-prs job
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # daily at 02:00 UTC
+
+jobs:
+  run-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run stale-prs POST
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: ${{ secrets.VERCEL_APP_URL }}/api/jobs/stale-prs
+          method: POST
+          headers: |
+            X-Cron-Secret: ${{ secrets.CRON_JOB_SECRET }}
