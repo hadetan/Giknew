@@ -27,6 +27,14 @@ function registerCommands(bot, config) {
         const text = ctx.message.text.replace(/^\/ask\s*/, '');
         if (!text) return ctx.reply('Provide a question: /ask <question>');
         const user = await ensureUser(ctx);
+        const { acquire } = require('../ai/aiConcurrency');
+        const lock = acquire(user.id);
+        if (!lock.ok) {
+            const msg = lock.reason === 'user_limit'
+                ? 'You have too many active AI requests. Wait for one to finish.'
+                : 'System is busy with many users. Please retry shortly.';
+            return ctx.reply(msg);
+        }
         const threadRootId = ctx.message.reply_to_message ? ctx.message.reply_to_message.message_id : ctx.message.message_id;
         const start = Date.now();
         let thinkingMsg;
@@ -45,6 +53,14 @@ function registerCommands(bot, config) {
 
         const useStreaming = config.streamingEnabled;
         let streamingActive = false;
+        let typingActive = true;
+        const typingLoop = async () => {
+            while (typingActive) {
+                try { await ctx.telegram.sendChatAction(ctx.chat.id, 'typing'); } catch (_) {}
+                await new Promise(r => setTimeout(r, 4000));
+            }
+        };
+        typingLoop();
         try {
             const runPromise = runAsk({
                 config,
@@ -62,7 +78,8 @@ function registerCommands(bot, config) {
                 }
             });
 
-            const { text: answer } = await runPromise;
+            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ text: 'Request exceeded time limit. Try refining your question.' }), 25000));
+            const { text: answer } = await Promise.race([runPromise, timeoutPromise]);
             clearTimeout(timer);
             const finalText = answer && answer.trim().length ? answer : '(no answer)';
             if (thinkingMsg) {
@@ -84,6 +101,8 @@ function registerCommands(bot, config) {
                 await ctx.reply(errText);
             }
         } finally {
+            typingActive = false;
+            if (lock && lock.release) lock.release();
             const latency = Date.now() - start;
             logger.info({ latencyMs: latency, upgraded, streaming: useStreaming, streamingActive }, 'ask_user_command_complete');
         }

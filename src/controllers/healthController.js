@@ -8,7 +8,6 @@ function getHealth(config) {
       const installations = await prisma.installation.count();
       const contexts = await prisma.contextMessage.count();
       const lastNotif = await prisma.notificationLog.findFirst({ orderBy: { sentAt: 'desc' }, select: { sentAt: true } });
-      // Bot concurrency metrics if bot created
       let concurrency = null;
       if (global.__notify_bot && global.__notify_bot._concurrencyStats) {
         concurrency = global.__notify_bot._concurrencyStats();

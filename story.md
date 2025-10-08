@@ -130,8 +130,8 @@ OUT (Defer):
 - [x] No proprietary secrets in repo.
 
 ### 5.12 Performance / Rate Protections
-- [ ] Hard guard: max 5 concurrent AI requests per user (in-memory tracking).
-- [ ] Each AI request < 25s wall clock.
+- [x] Hard guard: max 5 concurrent AI requests per user (in-memory tracking).
+- [x] Each AI request < 25s wall clock.
 
 ### 5.13 Streaming Feature Flag
  - [x] `STREAMING_ENABLED` env toggles streaming vs final answer only.
