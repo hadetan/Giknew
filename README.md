@@ -87,7 +87,7 @@ npm run dev
 npm run smoke
 ```
 
-Notes for contributors
+## Notes for contributors
 - Concurrency: adjust `AI_USER_CONCURRENCY` and `AI_GLOBAL_CONCURRENCY` in `.env` to tune limits.
 - The project uses Prisma for database access and assumes a Postgres-compatible `DATABASE_URL`.
 - The AI orchestration is behind `LONGCAT_API_KEY`/`LONGCAT_BASE_URL` and `STREAMING_ENABLED` toggles streaming behavior.
