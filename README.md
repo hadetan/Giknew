@@ -93,5 +93,5 @@ npm run smoke
 - The AI orchestration is behind `LONGCAT_API_KEY`/`LONGCAT_BASE_URL` and `STREAMING_ENABLED` toggles streaming behavior.
 - Check .env.example for more configurations.
 
-License & credits
+## License & credits
 - See `LICENSE` for licensing details.
