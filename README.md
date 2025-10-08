@@ -4,12 +4,12 @@ Giknew is a Telegram bot that connects to your GitHub account (via a GitHub App)
 
 This repository contains the Phase 1 scaffold: Telegram command handlers, GitHub App integration, a small AI orchestration layer for `/ask`, and a Prisma-backed data store for user and installation metadata.
 
-Core purpose
+## Core purpose
  - Provide compact, actionable PR summaries and notifications directly inside Telegram.
  - Let users ask short natural-language questions about their repositories and PRs (via `/ask`) and receive AI-powered summaries.
  - Keep user data scoped and private: each Telegram account links to one or more GitHub App installations and stored context is isolated by user.
 
-Key features
+## Key features
 - Account linking
 	- `/linkgithub` generates an installation link for your GitHub App and saves installation IDs to your account.
 	- `/unlink` removes the local link (you can also uninstall the app in GitHub to fully revoke access).
@@ -27,20 +27,20 @@ Key features
 - Concurrency & rate guards
 	- Per-user and global concurrency limits to protect the AI backend and GitHub API usage.
 
-Permissions and privacy
+## Permissions and privacy
 - The bot stores:
 	- Telegram user metadata and a hash used for linking.
 	- Linked GitHub installation IDs (no raw GitHub tokens are stored).
 	- Optional context messages for AI conversations (scoped by user).
 - You can remove all local data with `/purge`, and you can uninstall the GitHub App on GitHub to revoke access.
 
-How the GitHub integration works (high level)
+## How the GitHub integration works (high level)
 - The bot uses a GitHub App and the App's private key to create a signed JWT.
 - The JWT is exchanged for an installation access token (one per installation) by calling the GitHub REST API:
 	POST https://api.github.com/app/installations/:installation_id/access_tokens
 - Installation tokens are short-lived. The bot requests a fresh token when it needs to call GitHub on behalf of an installation.
 
-Common failure mode and what to check (installation token error)
+## Common failure mode and what to check (installation token error)
 If you see inline results like:
 
 	PR: (installation 89237730 token error)
@@ -51,7 +51,7 @@ This means the bot attempted to create or fetch an installation token for that i
 - Permissions or installation scope: even with a valid token, the App may not have permissions to list repositories or PRs for an installation. Check "Permissions & events" in your GitHub App settings and ensure it has at least read access to Repository metadata and Pull Requests.
 - Installation not present: make sure the user completed the installation flow and the installation ID is recorded in the database.
 
-Quick troubleshooting steps
+## Quick troubleshooting steps
 1. Confirm `.env` values:
 	 - `GITHUB_APP_ID` matches App ID in GitHub App settings.
 	 - `GITHUB_APP_PRIVATE_KEY` contains the exact PEM from GitHub (you can paste the multi-line PEM or the quoted single-line form; the loader will normalize it).
@@ -66,7 +66,7 @@ Quick troubleshooting steps
 4. Test installation token for a specific installation id (advanced):
 	 - If needed I can add a diagnostic script that exchanges the app JWT for an installation token and prints the HTTP response details.
 
-Developer quick start
+## Developer quick start
 1. Copy `.env.example` to `.env` and populate required values.
 2. Install dependencies and generate Prisma client:
 
@@ -87,11 +87,11 @@ npm run dev
 npm run smoke
 ```
 
-Notes for contributors
+## Notes for contributors
 - Concurrency: adjust `AI_USER_CONCURRENCY` and `AI_GLOBAL_CONCURRENCY` in `.env` to tune limits.
 - The project uses Prisma for database access and assumes a Postgres-compatible `DATABASE_URL`.
 - The AI orchestration is behind `LONGCAT_API_KEY`/`LONGCAT_BASE_URL` and `STREAMING_ENABLED` toggles streaming behavior.
 - Check .env.example for more configurations.
 
-License & credits
+## License & credits
 - See `LICENSE` for licensing details.
