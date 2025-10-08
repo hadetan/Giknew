@@ -74,6 +74,8 @@ OUT (Defer):
 - [x] Default model: `LongCat-Flash-Chat`.
 - [x] Thinking model: `LongCat-Flash-Thinking` used only when mode=thinking.
 - [x] Prompt always includes **fresh** GitHub slice (no persistent cached summary beyond transient in-process data).
+- [x] Enhance fresh GitHub slice
+    - Add failing checks summary, multiple installations aggregation, better repo selection & error messaging.
 - [x] Max output tokens limited (≤1000) and enforced.
 - [x] If processing >5s, bot sends placeholder “Summarizing…” (or typing state) before final answer.
 - [x] Structured Telegram-friendly Markdown output (no unsupported formatting).
@@ -90,17 +92,17 @@ OUT (Defer):
  - [x] Duplicate events (same comment id or check id + conclusion) not re-sent within 1h.
 
 ### 5.6 Stale PR Heuristic
-- [ ] Endpoint `/jobs/stale-prs` secured by header secret.
-- [ ] Heuristic flags PR if: age > X days (default 3), idle commits > Y hours (24), newer PRs merged in last Z hours (24).
-- [ ] Sends “stale” notice at most once per 24h per PR until activity.
-- [ ] State persisted to prevent duplicate daily notifications.
+- [x] Endpoint `/jobs/stale-prs` secured by header secret.
+- [x] Heuristic flags PR if: age > X days (default 3), idle commits > Y hours (24), newer PRs merged in last Z hours (24).
+- [x] Sends “stale” notice at most once per 24h per PR until activity.
+- [x] State persisted to prevent duplicate daily notifications.
 
 ### 5.7 Security & Privacy
 - [x] GitHub webhook HMAC (X-Hub-Signature-256) verified.
 - [x] Encrypted storage of installation tokens (AES-256-GCM or equivalent) with separate IV per record.
 - [x] No secrets or tokens logged (pino redaction).
-- [ ] User can run `/exportmeta` to see non-sensitive metadata.
-- [ ] `/purge` deletes user data (soft or hard) + prevents further notifications.
+- [x] User can run `/exportmeta` to see non-sensitive metadata.
+- [x] `/purge` deletes user data (soft or hard) + prevents further notifications.
 - [ ] Telegram webhook only accepts expected update schemas; rejects others gracefully.
 
 ### 5.8 Data Model & Persistence

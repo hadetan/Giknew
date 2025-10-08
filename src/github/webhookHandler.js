@@ -1,6 +1,5 @@
 const { logger } = require('../utils/logger');
-const { addInstallation, removeInstallation } = require('../repositories/installationRepo');
-const { markLinked } = require('../repositories/userRepo');
+const { removeInstallation } = require('../repositories/installationRepo');
 const prisma = require('../lib/prisma');
 const { recordNotification, recentlySent } = require('../repositories/notificationRepo');
 
