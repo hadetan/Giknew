@@ -36,6 +36,13 @@ async function launchBotWithResilience(config) {
 
 const { app, config } = createApp();
 
+process.on('unhandledRejection', (reason) => {
+  logger.error({ err: reason }, 'unhandled_rejection');
+});
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'uncaught_exception');
+});
+
 if (require.main === module) {
   const port = process.env.PORT || 3000;
   app.listen(port, async () => {

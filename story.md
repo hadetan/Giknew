@@ -116,11 +116,11 @@ OUT (Defer):
 
 ### 5.9 Config & Observability
 - [x] Central config module validates required env vars at startup.
-- [ ] `/health` endpoint returns JSON: version, uptime seconds, mode counts.
+- [x] `/health` endpoint returns JSON: version, uptime seconds, mode counts.
 - [ ] Structured JSON logging with severity & request correlation id.
 
 ### 5.10 Failure Handling
-- [ ] Uncaught errors produce sanitized user message & logged stack.
+- [x] Uncaught errors produce sanitized user message & logged stack.
 - [x] LongCat timeout (>30s) aborts and sends fallback error answer.
 - [x] GitHub API rate limit detection → user informed to retry (not silent fail).
 
