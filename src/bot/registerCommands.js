@@ -9,7 +9,19 @@ function registerCommands(bot, config) {
     });
 
     bot.help(async (ctx) => {
-        ctx.reply('/start - intro\n/linkgithub - connect your GitHub (coming soon)\n/unlink - remove GitHub link\n/mode fast|thinking - switch model\n/ask <question> - ask about your repos\n');
+        const helpText = [
+            '/start - quick intro and onboarding',
+            '/help - show this help message',
+            '/linkgithub - generate link to install the GitHub App and link your account',
+            '/unlink - remove local link to GitHub installations',
+            '/mode fast|thinking - choose model for next answers (fast or thinking)',
+            '/ask <question> - ask about your GitHub repos (supports replies to continue a thread)',
+            '/exportmeta - export non-sensitive metadata about your account',
+            '/purge - permanently delete/anonymize your data',
+            '/isolationdiag - run a quick diagnostic to ensure data isolation',
+            'Inline queries: type @Giknew in any chat to get quick PR summaries'
+        ].join('\n');
+        ctx.reply(helpText);
     });
 
     bot.command('mode', async (ctx) => {

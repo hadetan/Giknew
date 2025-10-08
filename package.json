@@ -5,6 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "node src/index.js",
+    "smoke": "node scripts/smoke.js",
     "lint": "eslint .",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:generate": "prisma generate",

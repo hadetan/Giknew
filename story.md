@@ -256,6 +256,23 @@ Later: instructions to expose tunnel (ngrok) for Telegram & GitHub webhooks loca
 6. Admin dashboard (aggregated stats) with optional passwordless auth
 
 ---
+
+## Backlog / Next Steps
+
+These are valuable improvements that are intentionally deferred from Phase 1, prioritized roughly by impact:
+
+- Improve persistent rate-limiting and quotas (persist counters across restarts).
+- Add user-level notification preferences and per-repo filters.
+- Add CI-friendly integration tests and a GitHub Actions workflow for smoke tests.
+- Implement encryption key rotation support and migration tooling.
+- Add metrics export (Prometheus) and richer logging (request tracing across webhooks & bot updates).
+- Expand streaming behavior to include concise progress summaries and user-configurable edit cadence.
+
+Small low-risk next steps to consider now:
+- Add unit tests for repositories and helpers.
+- Replace in-memory concurrency counters with Redis for multi-instance support.
+
+---
 ## 17. Risks & Mitigations
 | Risk | Impact | Mitigation |
 |------|--------|------------|
