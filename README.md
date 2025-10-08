@@ -9,7 +9,7 @@ This repository contains the Phase 1 scaffold: Telegram command handlers, GitHub
  - Let users ask short natural-language questions about their repositories and PRs (via `/ask`) and receive AI-powered summaries.
  - Keep user data scoped and private: each Telegram account links to one or more GitHub App installations and stored context is isolated by user.
 
-Key features
+## Key features
 - Account linking
 	- `/linkgithub` generates an installation link for your GitHub App and saves installation IDs to your account.
 	- `/unlink` removes the local link (you can also uninstall the app in GitHub to fully revoke access).
