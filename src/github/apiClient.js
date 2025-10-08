@@ -36,6 +36,14 @@ const pMap = async (items, mapper, concurrency = 6) => {
     return Promise.all(results);
 };
 
+function repoMatchesObj(repo, repoName) {
+    if (!repo || !repoName) return false;
+    const repoNameLower = repoName.toLowerCase();
+    const name = (repo.name || (repo.full_name && repo.full_name.split('/').pop()) || '').toLowerCase();
+    const full = (repo.full_name || '').toLowerCase();
+    return name === repoNameLower || full.endsWith('/' + repoNameLower);
+}
+
 async function fetchFreshSlice(config, user, options = {}) {
     const { maxInstallations = 5, reposPerInstallation = 100, prsPerRepo = 5, totalLineCap = 12, includeChecks = true } = options;
 
@@ -182,7 +190,7 @@ async function fetchFreshSlice(config, user, options = {}) {
 async function findRepoByNameAcrossInstallations(config, user, repoName) {
     const cache = getAccessibleReposCache(user.id);
     if (cache) {
-        const found = cache.find(r => r.name.toLowerCase() === repoName.toLowerCase() || r.full_name.toLowerCase().endsWith('/' + repoName.toLowerCase()));
+        const found = cache.find(r => repoMatchesObj(r, repoName));
         if (found) {
             try {
                 const tokenData = await getInstallationToken(config.github, found.installationId.toString());
@@ -191,7 +199,9 @@ async function findRepoByNameAcrossInstallations(config, user, repoName) {
                 if (!repoResp.ok) return null;
                 const data = await repoResp.json();
                 return { installationId: found.installationId, repo: data };
-            } catch (e) { }
+            } catch (e) {
+                logger.debug({ err: e, repoName }, 'repo_fetch_failed');
+            }
         }
     }
 
@@ -218,7 +228,7 @@ async function findRepoByNameAcrossInstallations(config, user, repoName) {
         }
     }
     if (names.length) setAccessibleReposCache(user.id, names);
-    const matches = names.filter(r => r.name.toLowerCase() === repoName.toLowerCase() || r.full_name.toLowerCase().endsWith('/' + repoName.toLowerCase()));
+    const matches = names.filter(r => repoMatchesObj(r, repoName));
     if (matches.length === 1) {
         const found2 = matches[0];
         try {
@@ -229,7 +239,7 @@ async function findRepoByNameAcrossInstallations(config, user, repoName) {
             const data = await repoResp.json();
             return { installationId: found2.installationId, repo: data };
         } catch (e) {
-            return null;
+            logger.debug({ err: e, repoName }, 'repo_fetch_failed');
         }
     }
     if (matches.length > 1) {
@@ -239,8 +249,6 @@ async function findRepoByNameAcrossInstallations(config, user, repoName) {
 }
 
 async function listAccessibleRepoNames(config, user, limit = 200) {
-    const { getInstallationsForUser } = require('../repositories/installationRepo');
-    // honor cache first
     const cached = getAccessibleReposCache(user.id);
     if (cached) {
         return Array.from(new Set(cached.map(r => r.name))).slice(0, limit);
@@ -269,7 +277,6 @@ async function listAccessibleRepoNames(config, user, limit = 200) {
             continue;
         }
     }
-    // populate cache with objects for faster findRepo lookups
     setAccessibleReposCache(user.id, names);
     return Array.from(new Set(names.map(r => r.name))).slice(0, limit);
 }

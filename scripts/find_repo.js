@@ -25,4 +25,7 @@ async function main() {
     console.log(JSON.stringify(res.repo, null, 2));
 }
 
-main().catch(e => { console.error(e); process.exit(4); });
+main().catch(e => { 
+    console.error(e);
+    process.exit(4);
+});

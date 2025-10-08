@@ -3,6 +3,7 @@ const { logger } = require('../utils/logger');
 const { loadContextMessages, storeTurn } = require('./contextService');
 const { fetchFreshSlice, findRepoByNameAcrossInstallations } = require('../github/apiClient');
 const { formatAnswer } = require('./formatAnswer');
+const { listAccessibleRepoNames } = require('../github/apiClient');
 
 async function runAsk({ config, user, question, mode, stream, sendStreaming, threadRootId, maxContextTurns = 6 }) {
     const fresh = await fetchFreshSlice(config, user);
@@ -29,7 +30,6 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
         }
 
         if (!repoNameMatch) {
-            const { listAccessibleRepoNames } = require('../github/apiClient');
             const names = await listAccessibleRepoNames(config, user, 200);
             if (names && names.length) {
                 const qTokens = question.toLowerCase().split(/[^a-z0-9_.-]+/i).filter(Boolean);
