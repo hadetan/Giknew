@@ -40,7 +40,7 @@ This repository contains the Phase 1 scaffold: Telegram command handlers, GitHub
 	POST https://api.github.com/app/installations/:installation_id/access_tokens
 - Installation tokens are short-lived. The bot requests a fresh token when it needs to call GitHub on behalf of an installation.
 
-Common failure mode and what to check (installation token error)
+## Common failure mode and what to check (installation token error)
 If you see inline results like:
 
 	PR: (installation 89237730 token error)
