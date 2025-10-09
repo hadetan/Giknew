@@ -1,7 +1,6 @@
 name: Run stale-prs job
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: '0 2 * * *' # daily at 02:00 UTC
 
@@ -9,14 +8,6 @@ jobs:
   run-job:
     runs-on: ubuntu-latest
     steps:
-      - name: Debug: print secret length (masked)
-        env:
-          CRON_SECRET: ${{ secrets.CRON_JOB_SECRET }}
-        run: |
-          # Print length only (do not expose secret)
-          len=${#CRON_SECRET}
-          echo "CRON_SECRET length: $len"
-
       - name: Run stale-prs POST (curl)
         env:
           VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
