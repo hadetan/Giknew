@@ -7,7 +7,7 @@ const { listAccessibleRepoNames } = require('../github/apiClient');
 
 async function runAsk({ config, user, question, mode, stream, sendStreaming, threadRootId, maxContextTurns = 6 }) {
     const fresh = await fetchFreshSlice(config, user);
-    const system = { role: 'system', content: 'You are Giknew, a GitHub assistant. Use only provided context. If information is missing, state that.' };
+    const system = { role: 'system', content: `You are Giknew, a helpful GitHub assistant. Answer concisely and in a friendly, conversational tone — as if talking to a colleague. Prefer plain language, avoid overly formal "legal" or robotic phrasing, and only rely on the context provided. If information is missing, say so briefly and suggest a next step.` };
     const maxContextLen = 3000;
     let prSummary = (fresh.prSummary || '').toString();
     if (prSummary.length > maxContextLen) prSummary = prSummary.slice(0, maxContextLen) + '\n... (truncated)';

@@ -13,7 +13,7 @@ Giknew is a privacy‑first Telegram assistant that:
 Success = A user links GitHub once, then reliably stays on top of reviews + can query “what matters now?” in seconds.
 
 ---
-## 2. Scope (Phase 1 / MVP)
+## 2. Scope
 IN:
 - GitHub App auth (personal & org repos user has installation access to)
 - Telegram bot (webhook) with commands & inline queries
@@ -42,7 +42,7 @@ OUT (Defer):
 3. **Occasional Maintainer**: Needs simple onboarding and minimal friction.
 
 ---
-## 4. User Journeys (Condensed)
+## 4. User Journeys
 1. **Onboard & Link**: `/start` → `/linkgithub` → OAuth/GitHub App approve → confirmation.
 2. **Ask a Question**: `/ask Summarize my open PRs needing review` → bot fetches PR data → answer.
 3. **Deep Reasoning**: `/mode thinking` → next question uses slower model.
