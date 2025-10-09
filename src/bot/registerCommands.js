@@ -29,8 +29,9 @@ function registerCommands(bot, config) {
                 lines.push('/bannedlist - list of all banned users');
                 lines.push('/ping - Quick health checkup and statics');
             }
-        } catch (_) {}
+        } catch (_) { }
         lines.push('\nInline queries: type @Giknew in any chat to get quick PR summaries');
+        lines.push('Inline ask: type `@Giknew ask: your question` to ask the bot inline');
         ctx.reply(lines.join('\n'));
     });
 
@@ -45,8 +46,8 @@ function registerCommands(bot, config) {
         ctx.reply(`Mode updated to ${mode}`);
     });
 
-    bot.command('ask', async (ctx) => {
-        const text = ctx.message.text.replace(/^\/ask\s*/, '');
+    // Shared ask handler so both /ask and replies to the bot can reuse same logic
+    async function doAsk(ctx, text) {
         if (!text) return ctx.reply('Provide a question: /ask <question>');
         const user = await ensureUser(ctx);
         const { acquire } = require('../ai/aiConcurrency');
@@ -57,7 +58,7 @@ function registerCommands(bot, config) {
                 : 'System is busy with many users. Please retry shortly.';
             return ctx.reply(msg);
         }
-        const threadRootId = ctx.message.reply_to_message ? ctx.message.reply_to_message.message_id : ctx.message.message_id;
+        const threadRootId = ctx.message && ctx.message.reply_to_message ? ctx.message.reply_to_message.message_id : ctx.message.message_id;
         const start = Date.now();
         let thinkingMsg;
         let upgraded = false;
@@ -128,6 +129,11 @@ function registerCommands(bot, config) {
             const latency = Date.now() - start;
             logger.info({ latencyMs: latency, upgraded, streaming: useStreaming, streamingActive }, 'ask_user_command_complete');
         }
+    }
+
+    bot.command('ask', async (ctx) => {
+        const text = ctx.message.text.replace(/^\/ask\s*/, '');
+        return doAsk(ctx, text);
     });
 
     bot.command('linkgithub', async (ctx) => {
@@ -308,8 +314,42 @@ function registerCommands(bot, config) {
     });
 
     bot.on('inline_query', async (ctx) => {
-        const q = (ctx.inlineQuery.query || '').trim().toLowerCase();
+        const rawQ = (ctx.inlineQuery.query || '').trim();
+        const q = rawQ.toLowerCase();
         const user = await ensureUser(ctx);
+        const askMatch = rawQ.match(/^\s*ask\s*[:\-]?\s*(.+)$/i);
+        if (askMatch && askMatch[1]) {
+            const question = askMatch[1].trim();
+            if (!question) {
+                return ctx.answerInlineQuery([
+                    { type: 'article', id: 'ask-usage', title: 'Ask usage', description: 'Provide a question after ask:', input_message_content: { message_text: 'Usage: @Giknew ask: <your question>' } }
+                ], { cache_time: 0 });
+            }
+            try {
+                const { acquire } = require('../ai/aiConcurrency');
+                const lock = acquire(user.id);
+                if (!lock.ok) {
+                    const reason = lock.reason === 'user_limit' ? 'You have too many active AI requests. Try later.' : 'System busy. Try again shortly.';
+                    return ctx.answerInlineQuery([
+                        { type: 'article', id: 'ask-busy', title: 'Busy', description: reason, input_message_content: { message_text: reason } }
+                    ], { cache_time: 0 });
+                }
+                const runPromise = runAsk({ config, user, question, mode: user.mode, stream: false, threadRootId: ctx.inlineQuery.inline_message_id || null });
+                const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ text: 'Request exceeded time limit. Try refining your question.' }), 20000));
+                const { text: answer } = await Promise.race([runPromise, timeoutPromise]);
+                if (lock && lock.release) lock.release();
+                const finalText = answer && answer.trim().length ? answer : '(no answer)';
+                return ctx.answerInlineQuery([
+                    { type: 'article', id: 'ask-0', title: finalText.slice(0, 64), description: 'Answer (tap to send)', input_message_content: { message_text: finalText } }
+                ], { cache_time: 5 });
+            } catch (e) {
+                logger.error({ err: e }, 'inline_ask_failed');
+                if (lock && lock.release) lock.release();
+                return ctx.answerInlineQuery([
+                    { type: 'article', id: 'ask-error', title: 'Error answering', description: 'Try again shortly', input_message_content: { message_text: 'Error answering your question.' } }
+                ], { cache_time: 0 });
+            }
+        }
         try {
             const { fetchFreshSlice } = require('../github/apiClient');
             const slice = await fetchFreshSlice({ github: config.github, longcat: config.longcat, security: config.security }, user);
@@ -342,10 +382,22 @@ function registerCommands(bot, config) {
     });
 
     bot.on('message', async (ctx, next) => {
-        if (ctx.update.message.text && ctx.update.message.text.startsWith('/')) {
+        try {
+            if (ctx.update.message.text && ctx.update.message.text.startsWith('/')) {
+                return next();
+            }
+            const replyTo = ctx.update.message.reply_to_message;
+            const repliedFromIsBot = replyTo && replyTo.from && (replyTo.from.is_bot === true || (bot && bot.botInfo && replyTo.from.id === bot.botInfo.id));
+            if (repliedFromIsBot) {
+                const text = ctx.update.message.text && ctx.update.message.text.trim();
+                if (!text) return ctx.reply('Provide a question in your reply.');
+                return doAsk(ctx, text);
+            }
+            return ctx.reply('Unknown command. /help for list.');
+        } catch (e) {
+            logger.error({ err: e }, 'message_handler_failed');
             return next();
         }
-        return ctx.reply('Unknown command. /help for list.');
     });
 }
 
