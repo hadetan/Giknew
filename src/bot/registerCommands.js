@@ -1,6 +1,7 @@
 const { logger } = require('../utils/logger');
 const { findByTelegramId, createOrGet, updateMode } = require('../repositories/userRepo');
 const { runAsk } = require('../ai/askOrchestrator');
+const { isOwner, ensureOwner } = require('./owner');
 
 function registerCommands(bot, config) {
     bot.start(async (ctx) => {
@@ -9,7 +10,7 @@ function registerCommands(bot, config) {
     });
 
     bot.help(async (ctx) => {
-        const helpText = [
+        const lines = [
             '/start - quick intro and onboarding',
             '/help - show this help message',
             '/linkgithub - generate link to install the GitHub App and link your account',
@@ -18,10 +19,14 @@ function registerCommands(bot, config) {
             '/ask <question> - ask about your GitHub repos (supports replies to continue a thread)',
             '/exportmeta - export non-sensitive metadata about your account',
             '/purge - permanently delete/anonymize your data',
-            '/isolationdiag - run a quick diagnostic to ensure data isolation',
-            'Inline queries: type @Giknew in any chat to get quick PR summaries'
-        ].join('\n');
-        ctx.reply(helpText);
+        ];
+        try {
+            if (isOwner(ctx)) {
+                lines.push('/isolationdiag - run a quick diagnostic to ensure data isolation');
+            }
+        } catch (_) { }
+        lines.push('Inline queries: type @Giknew in any chat to get quick PR summaries');
+        ctx.reply(lines.join('\n'));
     });
 
     bot.command('mode', async (ctx) => {
@@ -86,7 +91,7 @@ function registerCommands(bot, config) {
                     streamingActive = true;
                     try {
                         await ctx.telegram.editMessageText(thinkingMsg.chat.id, thinkingMsg.message_id, undefined, (upgraded ? 'Summarizing...\n\n' : '') + full.slice(0, 3900));
-                    } catch (_) {}
+                    } catch (_) { }
                 }
             });
 
@@ -187,6 +192,7 @@ function registerCommands(bot, config) {
     });
 
     bot.command('isolationdiag', async (ctx) => {
+        if (!await ensureOwner(ctx)) return;
         const user = await ensureUser(ctx);
         const prisma = require('../lib/prisma');
         const installs = await prisma.installation.findMany({ where: { userId: user.id } });
