@@ -9,7 +9,9 @@ const AGE_DAYS = 3;
 const IDLE_HOURS = 24;
 const MERGED_WINDOW_HOURS = 24;
 async function stalePrJob(config, req, res) {
+    try { logger.info({ headerPresent: !!req.headers['x-cron-secret'], headerLen: req.headers['x-cron-secret'] ? String(req.headers['x-cron-secret']).length : 0 }, 'cron_header_check'); } catch (_) { }
     if (req.headers['x-cron-secret'] !== config.security.cronSecret) {
+        logger.warn({ headerPresent: !!req.headers['x-cron-secret'] }, 'cron_header_mismatch');
         return res.status(401).json({ error: 'unauthorized' });
     }
     const started = Date.now();
@@ -27,7 +29,7 @@ async function stalePrJob(config, req, res) {
                     if (!reposResp.ok) continue;
                     const reposJson = await reposResp.json();
                     const repos = reposJson.repositories || [];
-                    for (const repo of repos.slice(0, 3)) { // limit breadth
+                    for (const repo of repos.slice(0, 3)) {
                         await scanRepoForStale({ repo, headers, user, config });
                     }
                 } catch (e) {
@@ -51,7 +53,6 @@ async function scanRepoForStale({ repo, headers, user, config }) {
     const prs = await prsResp.json();
     if (!Array.isArray(prs)) return;
 
-    // fetch recently merged PRs to evaluate heuristic condition 3
     const sinceIso = new Date(Date.now() - MERGED_WINDOW_HOURS * 3600000).toISOString();
     let mergedCountRecent = 0;
     try {
@@ -66,7 +67,7 @@ async function scanRepoForStale({ repo, headers, user, config }) {
         try {
             const created = new Date(pr.created_at);
             const ageDays = (Date.now() - created.getTime()) / 86400000;
-            const lastCommitTime = new Date(pr.updated_at); // approximation; ideal: last commit API
+            const lastCommitTime = new Date(pr.updated_at);
             const idleHours = (Date.now() - lastCommitTime.getTime()) / 3600000;
             if (ageDays < AGE_DAYS) continue;
             if (idleHours < IDLE_HOURS) continue;
