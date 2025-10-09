@@ -22,10 +22,12 @@ function registerCommands(bot, config) {
         ];
         try {
             if (isOwner(ctx)) {
+                lines.push('\n\nOwner only commands:\n\n');
                 lines.push('/isolationdiag - run a quick diagnostic to ensure data isolation');
                 lines.push('/ban - bans a user from using this bot');
                 lines.push('/unban - unbans a user so they can continue using this bot');
                 lines.push('/bannedlist - list of all banned users');
+                lines.push('/ping - Quick health checkup and statics');
             }
         } catch (_) { }
         lines.push('Inline queries: type @Giknew in any chat to get quick PR summaries');
@@ -217,6 +219,35 @@ function registerCommands(bot, config) {
             return ctx.reply(String(arg));
         } catch (e) {
             return ctx.reply('Failed to get id');
+        }
+    });
+
+    bot.command('ping', async (ctx) => {
+        if (!await ensureOwner(ctx)) return;
+        try {
+            const prisma = require('../lib/prisma');
+            const start = Date.now();
+            await prisma.user.count();
+            const pingMs = Date.now() - start;
+            const uptimeSeconds = process.uptime();
+            const uptimeHours = (uptimeSeconds / 3600).toFixed(2);
+            const users = await prisma.user.count();
+            const installations = await prisma.installation.count();
+            const contexts = await prisma.contextMessage.count();
+            let concurrency = null;
+            if (global.__notify_bot && global.__notify_bot._concurrencyStats) concurrency = global.__notify_bot._concurrencyStats();
+            const startedAt = new Date(Date.now() - uptimeSeconds * 1000).toISOString();
+            const parts = [
+                `status: ok`,
+                `uptimeHours: ${uptimeHours}`,
+                `startedAt: ${startedAt}`,
+                `pingMs: ${pingMs}ms`,
+                `counts: users=${users} installations=${installations} contexts=${contexts}`
+            ];
+            if (concurrency) parts.push(`concurrency: ${JSON.stringify(concurrency)}`);
+            return ctx.reply(parts.join('\n'));
+        } catch (e) {
+            return ctx.reply('Failed to collect ping/health');
         }
     });
 
