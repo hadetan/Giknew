@@ -8,10 +8,14 @@ jobs:
   run-job:
     runs-on: ubuntu-latest
     steps:
-      - name: Run stale-prs POST
-        uses: fjogeleit/http-request-action@v1
-        with:
-          url: ${{ secrets.VERCEL_APP_URL }}/api/jobs/stale-prs
-          method: POST
-          headers: |
-            X-Cron-Secret: ${{ secrets.CRON_JOB_SECRET }}
+      - name: Run stale-prs POST (curl)
+        env:
+          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_JOB_SECRET }}
+        run: |
+          set -e
+          echo "Posting to $VERCEL_APP_URL/api/jobs/stale-prs"
+          # Send header explicitly and output response for debugging
+          HTTP_CODE=$(curl -s -o /tmp/stale_resp.txt -w "%{http_code}" -X POST "$VERCEL_APP_URL/api/jobs/stale-prs" -H "X-Cron-Secret: $CRON_SECRET" || true)
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body:" && cat /tmp/stale_resp.txt || true
