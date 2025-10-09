@@ -2,7 +2,7 @@
 
 Giknew is a Telegram bot that connects to your GitHub account (via a GitHub App) and gives fast, context-aware summaries and notifications about open pull requests. It's designed to help developers and teams quickly surface PR status, failing checks, and short summaries—either via commands or inline queries inside Telegram.
 
-This repository contains the Phase 1 scaffold: Telegram command handlers, GitHub App integration, a small AI orchestration layer for `/ask`, and a Prisma-backed data store for user and installation metadata.
+Telegram command handlers, GitHub App integration, a small AI orchestration layer for `/ask`, and a Prisma-backed data store for user and installation metadata.
 
 ## Core purpose
  - Provide compact, actionable PR summaries and notifications directly inside Telegram.
@@ -34,7 +34,7 @@ This repository contains the Phase 1 scaffold: Telegram command handlers, GitHub
 	- Optional context messages for AI conversations (scoped by user).
 - You can remove all local data with `/purge`, and you can uninstall the GitHub App on GitHub to revoke access.
 
-## How the GitHub integration works (high level)
+## How the GitHub integration works
 - The bot uses a GitHub App and the App's private key to create a signed JWT.
 - The JWT is exchanged for an installation access token (one per installation) by calling the GitHub REST API:
 	POST https://api.github.com/app/installations/:installation_id/access_tokens
