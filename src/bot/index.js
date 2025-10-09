@@ -57,7 +57,11 @@ function createBot(config) {
 
 async function handleUpdate(bot, update, res) {
     try {
-        await bot.handleUpdate(update, res);
+        if (typeof res !== 'undefined') {
+            await bot.handleUpdate(update, res);
+        } else {
+            await bot.handleUpdate(update);
+        }
     } catch (err) {
         logger.error({ err }, 'Telegram update handling failed');
     }

@@ -14,7 +14,7 @@ async function launchBotWithResilience(config) {
                 await botInstance.launch();
                 logger.info({ mode: 'polling' }, 'Bot launched');
             } else if (config.appBaseUrl && config.autoSetWebhook) {
-                const webhookUrl = `${config.appBaseUrl.replace(/\/$/, '')}/webhook/telegram`;
+                const webhookUrl = `${config.appBaseUrl.replace(/\/$/, '')}/api/webhook/telegram`;
                 await botInstance.telegram.deleteWebhook().catch(() => { });
                 await botInstance.telegram.setWebhook(webhookUrl);
                 logger.info({ webhookUrl, mode: 'webhook' }, 'Bot webhook configured');
