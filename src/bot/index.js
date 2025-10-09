@@ -69,7 +69,7 @@ function createBot(config) {
     }
     bot.formattedSend = async (chatId, text) => {
         try {
-            if (!text) return await bot.telegram.sendMessage(chatId, '');
+            if (!text) return;
             if (String(text).includes('```')) {
                 const cleaned = String(text).replace(/```/g, '').slice(0, 3900);
                 const payload = `<pre>${escapeHtml(cleaned)}</pre>`;
