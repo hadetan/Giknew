@@ -86,3 +86,9 @@ model LinkState {
   createdAt  DateTime @default(now())
   @@index([userId, createdAt])
 }
+
+model BannedUser {
+  id        Int      @id @default(autoincrement())
+  telegramId BigInt  @unique
+  createdAt DateTime @default(now())
+}

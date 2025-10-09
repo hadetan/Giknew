@@ -27,6 +27,15 @@ function createBot(config) {
     });
 
     bot.use(async (ctx, next) => {
+        try {
+            const { isBanned } = require('../repositories/banRepo');
+            const fromId = ctx.from?.id;
+            if (fromId && await isBanned(fromId)) {
+                try { await ctx.reply('You are banned from using this bot.'); } catch (_) { }
+                return;
+            }
+        } catch (_) { /* ignore ban check errors and continue */ }
+
         const userId = ctx.from?.id;
         let tracked = false;
         if (userId) {
@@ -52,6 +61,25 @@ function createBot(config) {
 
     registerCommands(bot, config);
     bot._concurrencyStats = () => ({ perUserInFlight: perUserInFlight.size, globalInFlight });
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+    bot.formattedSend = async (chatId, text) => {
+        try {
+            if (!text) return;
+            if (String(text).includes('```')) {
+                const cleaned = String(text).replace(/```/g, '').slice(0, 3900);
+                const payload = `<pre>${escapeHtml(cleaned)}</pre>`;
+                return await bot.telegram.sendMessage(chatId, payload, { parse_mode: 'HTML' });
+            }
+            return await bot.telegram.sendMessage(chatId, String(text).slice(0, 3900));
+        } catch (err) {
+            throw err;
+        }
+    };
     return bot;
 }
 

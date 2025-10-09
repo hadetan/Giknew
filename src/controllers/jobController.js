@@ -82,7 +82,7 @@ async function scanRepoForStale({ repo, headers, user, config }) {
             if (!global.__notify_bot) global.__notify_bot = createBot(config);
             await recordNotification(user.id, eventType, externalId);
             await markStaleNotified(user.id, repo.id, pr.number);
-            try { await global.__notify_bot.telegram.sendMessage(Number(user.telegramId), msg.slice(0, 3900)); } catch (e) { /* ignore send errors */ }
+            try { await global.__notify_bot.formattedSend(Number(user.telegramId), msg.slice(0, 3900)); } catch (e) { /* ignore send errors */ }
         } catch (e) {
             // continue next PR
         }

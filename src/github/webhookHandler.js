@@ -39,7 +39,6 @@ async function handleInstallation(payload, config) {
         return;
     }
     if (action === 'created') {
-        // Link will now be handled via explicit redirect callback; just log creation.
         logger.info({ installationId }, 'installation_created');
     }
 }
@@ -89,7 +88,7 @@ async function sendTelegram(telegramId, text, config) {
         global.__notify_bot = createBot(config);
     }
     try {
-        await global.__notify_bot.telegram.sendMessage(Number(telegramId), text.slice(0, 3900));
+        await global.__notify_bot.formattedSend(Number(telegramId), text.slice(0, 3900));
     } catch (e) {
         logger.error({ err: e }, 'telegram_send_failed');
     }
@@ -103,7 +102,7 @@ async function handleIssueComment(payload, config) {
         const users = await getUsersForInstallation(installationId);
         if (!users.length) return;
         const pr = payload.issue?.pull_request;
-        if (!pr) return; // only notify PR comments, skip issues
+        if (!pr) return;
         const body = payload.comment?.body || '';
         const repoFull = payload.repository?.full_name;
         const number = payload.issue?.number;
@@ -117,7 +116,7 @@ async function handleIssueComment(payload, config) {
 
 async function handlePullRequest(payload, config) {
     try {
-        if (payload.action !== 'opened') return; // placeholder for future granular triggers
+        if (payload.action !== 'opened') return;
         const installationId = payload.installation?.id;
         if (!installationId) return;
         const users = await getUsersForInstallation(installationId);
