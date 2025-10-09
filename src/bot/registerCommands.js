@@ -23,6 +23,9 @@ function registerCommands(bot, config) {
         try {
             if (isOwner(ctx)) {
                 lines.push('/isolationdiag - run a quick diagnostic to ensure data isolation');
+                lines.push('/ban - bans a user from using this bot');
+                lines.push('/unban - unbans a user so they can continue using this bot');
+                lines.push('/bannedlist - list of all banned users');
             }
         } catch (_) { }
         lines.push('Inline queries: type @Giknew in any chat to get quick PR summaries');
