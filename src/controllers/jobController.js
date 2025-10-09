@@ -5,10 +5,6 @@ const { getInstallationToken } = require('../github/auth');
 const { markStaleNotified, lastNotified } = require('../repositories/stalePrRepo');
 const { recordNotification, recentlySent } = require('../repositories/notificationRepo');
 
-async function stalePrJob(_config, _req, res) {
-    res.status(501).json({ error: 'Not implemented' });
-}
-
 const AGE_DAYS = 3;
 const IDLE_HOURS = 24;
 const MERGED_WINDOW_HOURS = 24;
