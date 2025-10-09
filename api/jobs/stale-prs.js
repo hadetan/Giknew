@@ -1,4 +1,4 @@
-const { createApp } = require('../src/app');
+const { createApp } = require('../../src/app')
 
 let appInstance;
 try {
