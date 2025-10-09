@@ -89,7 +89,7 @@ async function sendTelegram(telegramId, text, config) {
         global.__notify_bot = createBot(config);
     }
     try {
-        await global.__notify_bot.telegram.sendMessage(Number(telegramId), text.slice(0, 3900));
+        await global.__notify_bot.formattedSend(Number(telegramId), text.slice(0, 3900));
     } catch (e) {
         logger.error({ err: e }, 'telegram_send_failed');
     }

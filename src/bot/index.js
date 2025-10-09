@@ -52,6 +52,25 @@ function createBot(config) {
 
     registerCommands(bot, config);
     bot._concurrencyStats = () => ({ perUserInFlight: perUserInFlight.size, globalInFlight });
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+    bot.formattedSend = async (chatId, text) => {
+        try {
+            if (!text) return await bot.telegram.sendMessage(chatId, '');
+            if (String(text).includes('```')) {
+                const cleaned = String(text).replace(/```/g, '').slice(0, 3900);
+                const payload = `<pre>${escapeHtml(cleaned)}</pre>`;
+                return await bot.telegram.sendMessage(chatId, payload, { parse_mode: 'HTML' });
+            }
+            return await bot.telegram.sendMessage(chatId, String(text).slice(0, 3900));
+        } catch (err) {
+            throw err;
+        }
+    };
     return bot;
 }
 
