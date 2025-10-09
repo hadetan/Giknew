@@ -22,15 +22,15 @@ function registerCommands(bot, config) {
         ];
         try {
             if (isOwner(ctx)) {
-                lines.push('\n\nOwner only commands:\n\n');
+                lines.push('\n\nOwner only commands:');
                 lines.push('/isolationdiag - run a quick diagnostic to ensure data isolation');
                 lines.push('/ban - bans a user from using this bot');
                 lines.push('/unban - unbans a user so they can continue using this bot');
                 lines.push('/bannedlist - list of all banned users');
                 lines.push('/ping - Quick health checkup and statics');
             }
-        } catch (_) { }
-        lines.push('Inline queries: type @Giknew in any chat to get quick PR summaries');
+        } catch (_) {}
+        lines.push('\nInline queries: type @Giknew in any chat to get quick PR summaries');
         ctx.reply(lines.join('\n'));
     });
 
