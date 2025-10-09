@@ -75,7 +75,20 @@ function createBot(config) {
                 const payload = `<pre>${escapeHtml(cleaned)}</pre>`;
                 return await bot.telegram.sendMessage(chatId, payload, { parse_mode: 'HTML' });
             }
-            return await bot.telegram.sendMessage(chatId, String(text).slice(0, 3900));
+            const asStr = String(text).slice(0, 3900);
+            function escapeAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+            let payload = asStr.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, url) => {
+                return `<a href="${escapeAttr(url)}">${escapeHtml(label)}</a>`;
+            });
+            payload = payload.replace(/\*\*([^*]+)\*\*/g, (m, inner) => `<b>${escapeHtml(inner)}</b>`);
+            payload = payload.replace(/_([^_]+)_/g, (m, inner) => `<i>${escapeHtml(inner)}</i>`);
+            payload = payload.replace(/`([^`]+)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
+            payload = payload.replace(/&/g, '&amp;');
+            payload = payload.replace(/&lt;(\/)?(pre|code|b|i|a)([^&]*)&gt;/g, (m, slash, tag, rest) => {
+                return `<${slash || ''}${tag}${rest.replace(/&quot;/g, '"')}>`;
+            });
+
+            return await bot.telegram.sendMessage(chatId, payload, { parse_mode: 'HTML' });
         } catch (err) {
             throw err;
         }
