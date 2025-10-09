@@ -7,7 +7,7 @@ const { listAccessibleRepoNames } = require('../github/apiClient');
 
 async function runAsk({ config, user, question, mode, stream, sendStreaming, threadRootId, maxContextTurns = 6 }) {
     const fresh = await fetchFreshSlice(config, user);
-    const system = { role: 'system', content: `You are Giknew, a helpful GitHub assistant. Answer concisely and in a friendly, conversational tone — as if talking to a colleague. Prefer plain language, avoid overly formal "legal" or robotic phrasing, and only rely on the context provided. If information is missing, say so briefly and suggest a next step.` };
+    const system = { role: 'system', content: `You are Giknew, a GitHub assistant. Answer concisely and in a friendly, conversational tone. IMPORTANT: Do not invent facts or make up repositories, PRs, or statuses. Only use information explicitly provided in the context blocks below (PR_SUMMARY, FAILING_CHECKS, REPO_* metadata, and any previous user messages). Treat any prior assistant responses as unverified: you may quote them but must not assert them as fact unless they are also supported by the PR_SUMMARY or repository metadata. If you cannot confirm something from the provided context, say you cannot confirm it and suggest a safe next step (for example: ask the user to run a specific command, link the repo, or provide the repo full name).` };
     const maxContextLen = 3000;
     let prSummary = (fresh.prSummary || '').toString();
     if (prSummary.length > maxContextLen) prSummary = prSummary.slice(0, maxContextLen) + '\n... (truncated)';
@@ -35,8 +35,8 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
                 const qTokens = question.toLowerCase().split(/[^a-z0-9_.-]+/i).filter(Boolean);
                 qTokens.sort((a, b) => b.length - a.length);
                 for (const token of qTokens) {
-                    if (!/^[a-z0-9_.-]{2,40}$/i.test(token)) continue;
-                    const foundName = names.find(n => n.toLowerCase() === token || n.toLowerCase().includes(token) || token.includes(n.toLowerCase()));
+                    if (!/^[a-z0-9_.-]{3,40}$/i.test(token)) continue;
+                    const foundName = names.find(n => n.toLowerCase() === token);
                     if (foundName) { repoNameMatch = foundName; break; }
                 }
             }
@@ -64,7 +64,18 @@ async function runAsk({ config, user, question, mode, stream, sendStreaming, thr
         prior = await loadContextMessages(config.security.masterKey, user.id, threadRootId, maxContextTurns);
     }
     const userMsg = { role: 'user', content: `${question}\n\n<context>\n${contextBlock}` };
-    const messages = [system, ...prior, userMsg];
+    const messages = [system];
+    for (const p of prior) {
+        if (!p || !p.role) continue;
+        if (p.role === 'user') {
+            messages.push({ role: 'user', content: p.content });
+        } else if (p.role === 'assistant') {
+            messages.push({ role: 'system', content: `PREVIOUS_ASSISTANT_UNVERIFIED:\n${p.content}` });
+        } else {
+            messages.push({ role: p.role, content: p.content });
+        }
+    }
+    messages.push(userMsg);
 
     const start = Date.now();
     try {

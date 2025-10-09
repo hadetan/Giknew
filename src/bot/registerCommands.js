@@ -317,9 +317,10 @@ function registerCommands(bot, config) {
         const rawQ = (ctx.inlineQuery.query || '').trim();
         const q = rawQ.toLowerCase();
         const user = await ensureUser(ctx);
-        const askMatch = rawQ.match(/^\s*ask\s*[:\-]?\s*(.+)$/i);
-        if (askMatch && askMatch[1]) {
-            const question = askMatch[1].trim();
+        const askMatch = rawQ.match(/^\s*(?:ask|\/ask|q)\s*[:\-]?\s*(.+)$/i);
+        const looksLikeQuestion = /\?$/.test(rawQ) || (rawQ.split(/\s+/).length >= 3 && rawQ.length > 20);
+        if ((askMatch && askMatch[1]) || looksLikeQuestion) {
+            const question = (askMatch && askMatch[1]) ? askMatch[1].trim() : rawQ.trim();
             if (!question) {
                 return ctx.answerInlineQuery([
                     { type: 'article', id: 'ask-usage', title: 'Ask usage', description: 'Provide a question after ask:', input_message_content: { message_text: 'Usage: @Giknew ask: <your question>' } }
