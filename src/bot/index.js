@@ -27,6 +27,15 @@ function createBot(config) {
     });
 
     bot.use(async (ctx, next) => {
+        try {
+            const { isBanned } = require('../repositories/banRepo');
+            const fromId = ctx.from?.id;
+            if (fromId && await isBanned(fromId)) {
+                try { await ctx.reply('You are banned from using this bot.'); } catch (_) { }
+                return;
+            }
+        } catch (_) { /* ignore ban check errors and continue */ }
+
         const userId = ctx.from?.id;
         let tracked = false;
         if (userId) {

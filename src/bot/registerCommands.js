@@ -152,6 +152,71 @@ function registerCommands(bot, config) {
         ctx.reply('GitHub link removed locally. You may also uninstall the App from GitHub settings.');
     });
 
+    bot.command('ban', async (ctx) => {
+        if (!await ensureOwner(ctx)) return;
+        const parts = (ctx.message.text || '').trim().split(/\s+/);
+        const id = parts[1];
+        if (!id) return ctx.reply('Usage: /ban <telegramId>');
+        try {
+            const { ban } = require('../repositories/banRepo');
+            await ban(id);
+            return ctx.reply(`Banned ${id}`);
+        } catch (e) {
+            return ctx.reply('Failed to ban user.');
+        }
+    });
+
+    bot.command('unban', async (ctx) => {
+        if (!await ensureOwner(ctx)) return;
+        const parts = (ctx.message.text || '').trim().split(/\s+/);
+        const id = parts[1];
+        if (!id) return ctx.reply('Usage: /unban <telegramId>');
+        try {
+            const { unban } = require('../repositories/banRepo');
+            await unban(id);
+            return ctx.reply(`Unbanned ${id}`);
+        } catch (e) {
+            return ctx.reply('Failed to unban user.');
+        }
+    });
+
+    bot.command('bannedlist', async (ctx) => {
+        if (!await ensureOwner(ctx)) return;
+        try {
+            const { listBanned } = require('../repositories/banRepo');
+            const list = await listBanned();
+            if (!list || !list.length) return ctx.reply('No banned users');
+            return ctx.reply('Banned users:\n' + list.join('\n'));
+        } catch (e) {
+            return ctx.reply('Failed to list banned users');
+        }
+    });
+
+    bot.command('id', async (ctx) => {
+        if (!await ensureOwner(ctx)) return;
+        try {
+            const reply = ctx.message.reply_to_message;
+            if (reply && reply.from && reply.from.id) {
+                return ctx.reply(String(reply.from.id));
+            }
+            const parts = (ctx.message.text || '').trim().split(/\s+/);
+            const arg = parts[1];
+            if (!arg) return ctx.reply('Usage: reply to a user with /id or /id @username');
+            if (arg.startsWith('@')) {
+                try {
+                    const chat = await ctx.telegram.getChat(arg);
+                    if (chat && chat.id) return ctx.reply(String(chat.id));
+                    return ctx.reply('Could not resolve username.');
+                } catch (e) {
+                    return ctx.reply('Could not resolve username.');
+                }
+            }
+            return ctx.reply(String(arg));
+        } catch (e) {
+            return ctx.reply('Failed to get id');
+        }
+    });
+
     bot.command('exportmeta', async (ctx) => {
         const user = await ensureUser(ctx);
         const prisma = require('../lib/prisma');
